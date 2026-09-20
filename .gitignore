@@ -4,3 +4,4 @@
 *.elf
 *.map
 __pycache__/
+test/build/
