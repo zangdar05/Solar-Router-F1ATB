@@ -15,18 +15,12 @@ public:
   Action();  //Constructeur par defaut
   Action(int aIdx);
 
-  void Definir(String ligne);
-  String Lire();
-  void Activer(float Pw, int Heure, float Temperature, int Ltarfbin);
   void Arreter();
   void RelaisOn();
   void Prioritaire();
 
   int16_t CanalTempEnCours(int Heure);
-  byte TypeEnCours(int Heure, float Temperature, int Ltarfbin, int Retard);
   byte SelActEnCours(int Heure);
-  int Valmin(int Heure);
-  int Valmax(int Heure);
   struct ParaPeriode {
     int Type;
     int Vmin;

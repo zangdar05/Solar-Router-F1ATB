@@ -331,12 +331,14 @@ static void test_multisinus_tables() {
   // (Solar_Router_V17_29.ino:562-573, "optimisation Michy") NE correspondent PAS
   // à ce que recalcule setup() : setup() les écrase intégralement au démarrage.
   // Le test fige l'écart observé plutôt que de le corriger.
+  // Depuis l'optimisation : les tables constantes du .ino sont exactement le
+  // résultat de l'algorithme (le recalcul au setup() a été supprimé).
   int nbDiff = 0;
   for (int I = 0; I < 101; I++)
     if (tot[I] != tabPulseSinusTotal[I] || on[I] != tabPulseSinusOn[I]) nbDiff++;
-  CHECK_EQ(nbDiff, 79);
-  CHECK_EQ((int)tabPulseSinusTotal[0], 2);   // valeur littérale du .ino
-  CHECK_EQ((int)tot[0], 20);                 // valeur recalculée par setup()
+  CHECK_EQ(nbDiff, 0);
+  CHECK_EQ((int)tabPulseSinusTotal[0], 20);
+  CHECK_EQ((int)tot[0], 20);
   CHECK_EQ((int)tabPulseSinusOn[0], 0);
   CHECK_EQ((int)on[0], 0);
   // Les extrémités "utiles" restent cohérentes après recalcul

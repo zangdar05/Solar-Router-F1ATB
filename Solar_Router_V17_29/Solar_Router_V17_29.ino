@@ -410,8 +410,6 @@
 const char *ap_default_ssid;        // Mode Access point  IP: 192.168.4.1
 const char *ap_default_psk = NULL;  // Pas de mot de passe en AP,
 
-//Paramètres pour le stockage en ROM apres les données du RMS
-unsigned long Cle_ROM;
 
 String ssid = "";
 String password = "";
@@ -473,12 +471,10 @@ int cptLEDgreen = 0;
 //   Horloge
 //**************
 String DATE = "";
-String DateCeJour = "";  //Plus utilisé depuis V13
 String DateAMJ;
 String oldDateAMJ = "";
 bool HeureValide = false;
 int16_t HeureCouranteDeci = 0;
-int16_t idxPromDuJour = 0;
 int16_t Int_Heure = 0;  //Heure interne
 int16_t Int_Minute = 0;
 int16_t Int_Seconde = 0;
@@ -547,19 +543,25 @@ bool LissageLong = false;
 bool Pva_valide = false;
 int OffsetP = 0;  //Decalage puissance pour essais
 
-//Tableaux pour Multi-sinus. (optimisation Michy)
-uint8_t tabPulseSinusTotal[101] = { 2,
-                                    61, 43, 33, 25, 40, 33, 57, 37, 11, 20, 55, 25, 23, 57, 40, 25, 53, 61, 21, 5,
-                                    19, 59, 61, 25, 8, 23, 37, 25, 31, 20, 29, 47, 61, 59, 40, 25, 27, 29, 59, 5,
-                                    61, 19, 51, 59, 40, 37, 17, 25, 51, 4, 51, 25, 17, 37, 40, 59, 51, 19, 61, 5,
-                                    59, 29, 27, 25, 40, 59, 61, 47, 29, 20, 31, 25, 37, 23, 8, 25, 61, 59, 19, 5,
-                                    21, 61, 53, 25, 40, 57, 23, 25, 55, 20, 11, 37, 57, 33, 40, 25, 33, 43, 61, 2 };
-uint8_t tabPulseSinusOn[101] = { 0,
-                                 1, 1, 1, 1, 2, 2, 4, 3, 1, 2, 6, 3, 3, 8, 6, 4, 9, 11, 4, 1,
-                                 4, 13, 14, 6, 2, 6, 10, 7, 9, 6, 9, 15, 20, 20, 14, 9, 10, 11, 23, 2,
-                                 25, 8, 22, 26, 18, 17, 8, 12, 25, 2, 26, 13, 9, 20, 22, 33, 29, 11, 36, 3,
-                                 36, 18, 17, 16, 26, 39, 41, 32, 20, 14, 22, 18, 27, 17, 6, 19, 47, 46, 15, 4,
-                                 17, 50, 44, 21, 34, 49, 20, 22, 49, 18, 10, 34, 53, 31, 38, 24, 32, 42, 60, 2 };
+//Tableaux pour Multi-sinus : longueur de trame (demi-sinus) et nombre de demi-sinus ON pour 0..100 %.
+//Valeurs = résultat de l'algorithme de recherche (rapport N/T à 0,4 % près, T impair ou N pair pour éviter
+//une composante continue) autrefois recalculé au setup(). Vérifié par test/test_main.cpp (test_multisinus_tables).
+extern const uint8_t tabPulseSinusTotal[101] = {  // extern : visible des tests hôte
+  20, 73, 43, 31, 23, 21, 32, 28, 24, 22, 20, 27, 25, 23, 21, 26, 25, 23, 22, 21,
+  20, 29, 23, 26, 21, 24, 23, 22, 25, 31, 20, 26, 25, 21, 35, 23, 22, 27, 21, 23,
+  20, 27, 24, 21, 25, 29, 26, 30, 21, 37, 20, 37, 21, 30, 26, 29, 25, 21, 24, 27,
+  20, 23, 21, 27, 22, 23, 35, 21, 25, 26, 20, 31, 25, 22, 23, 24, 21, 26, 23, 29,
+  20, 21, 22, 23, 25, 26, 21, 23, 25, 27, 20, 22, 24, 28, 32, 21, 23, 31, 43, 73,
+  20
+};
+extern const uint8_t tabPulseSinusOn[101] = {
+  0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4,
+  4, 6, 5, 6, 5, 6, 6, 6, 7, 9, 6, 8, 8, 7, 12, 8, 8, 10, 8, 9,
+  8, 11, 10, 9, 11, 13, 12, 14, 10, 18, 10, 19, 11, 16, 14, 16, 14, 12, 14, 16,
+  12, 14, 13, 17, 14, 15, 23, 14, 17, 18, 14, 22, 18, 16, 17, 18, 16, 20, 18, 23,
+  16, 17, 18, 19, 21, 22, 18, 20, 22, 24, 18, 20, 22, 26, 30, 20, 22, 30, 42, 72,
+  20
+};
 //Triac
 bool erreurTriac = false;
 byte pTriac = 0;  //index table choix Pins pour Gachette Triac & ZC
@@ -1037,29 +1039,6 @@ void setup() {
 
 
 
-  //Tableau Longueur Pulse et Longueur Trame pour Multi-Sinus de 0 à 100%
-  float erreur;
-  float vrai;
-  float target;
-  for (int I = 0; I < 101; I++) {
-    tabPulseSinusTotal[I] = -1;
-    tabPulseSinusOn[I] = -1;
-    target = float(I) / 100.0;
-    for (int T = 20; T < 101; T++) {
-      for (int N = 0; N <= T; N++) {
-        if (T % 2 == 1 || N % 2 == 0) {  // Valeurs impaires du total ou pulses pairs pour éviter courant continu
-          vrai = float(N) / float(T);
-          erreur = abs(vrai - target);
-          if (erreur < 0.004) {
-            tabPulseSinusTotal[I] = T;
-            tabPulseSinusOn[I] = N;
-            N = 101;
-            T = 101;
-          }
-        }
-      }
-    }
-  }
   for (int i = 0; i < LES_ROUTEURS_MAX; i++) {
     RMS_IP[i] = 0;  //IP du reseau
     RMS_NomEtat[i] = "";

@@ -7,7 +7,6 @@ const char *ntpServer2 = "time.nist.gov";
 unsigned short Int_Last_10Millis = 0;                                                                      // Europe Centrale                                                                                  //-1=inconnu,0=dimache,1=lundi...
 String codeTZ[] = { "CET-1CEST,M3.5.0,M10.5.0/3", "AST4", "GFT3", "RET-4", "EAT-3", "NCT-11", "WFT-12" };  // Europe centrale, Guadeloupe / Martinique, Guyane, Réunion, Mayotte,Nouvelle Calédonie, Wallis et Futuna
 int8_t Jour = -1;                                                                                          //-1=inconnu,0=dimanche,1=lundi...
-uint64_t baseTick10ms = 0;
 time_t baseEpoch = 0;
 void FormatteHeureDate() {
   // Formatte la date et l'heure en String

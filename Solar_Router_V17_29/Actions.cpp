@@ -160,61 +160,11 @@ Action::ParaPeriode Action::ParaEnCours(int Heure, float Temperature, int Ltarfb
 
   return P;  //0=NO (pas utilisé),1=OFF,2=ON,3=PW,4=Triac
 }
-byte Action::TypeEnCours(int Heure, float Temperature, int Ltarfbin, int Retard) {  //Retourne type d'action  active à cette heure et test temperature OK
-  byte S = 1;                                                                       //Off
-  int16_t Tempx10 = int(Temperature * 10.0);                                        //Température en dixième de degré                                                                  //Equivalent à Action Off
-  bool ConditionsOk;
-  for (int i = 0; i < NbPeriode; i++) {
-    if (Heure >= Hdeb[i] && Heure <= Hfin[i]) {
-      ConditionsOk = true;
-      if (Temperature > -100.0) {
-        if (Tinf[i] < 1500 && Tsup[i] < 1500 && Tinf[i] < Tsup[i]) {  // on applique un hystérésis dont les valeurs sont Tinf et Tsup
-          if (Tempx10 > Tinf[i] && Tempx10 > Tsup[i]) Tseuil = Tinf[i];
-          if (Tempx10 < Tinf[i] && Tempx10 < Tsup[i]) Tseuil = Tsup[i];
-          if (Tempx10 > Tseuil) { ConditionsOk = false; }
-        } else {
-          if (Tinf[i] <= 1000 && Tempx10 > Tinf[i]) { ConditionsOk = false; }
-          if (Tsup[i] <= 1000 && Tempx10 < Tsup[i]) { ConditionsOk = false; }
-        }
-      }
-      if (Ltarfbin > 0 && (Ltarfbin & Tarif[i]) == 0) ConditionsOk = false;
-      if (SelAct[i] != 255) {  //On conditionne à une autre action
-        if (Hmin[i] != 0 && (Hmin[i] > ExtHequiv || ExtValide == 0)) ConditionsOk = false;
-        if (Hmax[i] != 0 && (Hmax[i] < ExtHequiv || ExtValide == 0)) ConditionsOk = false;
-        if (Ooff[i] != 0 && ((int(Ooff[i]) >= ExtOuvert && Retard != 100) || ExtValide == 0)) ConditionsOk = false;  //Inferieur au seuil bas
-        if (O_on[i] != 0 && ((int(O_on[i]) > ExtOuvert && Retard == 100) || ExtValide == 0)) ConditionsOk = false;   //Inferieur au seuil haut et pas encore ouvert
-      }
-      if (ConditionsOk) S = Type[i];
-    }
-  }
-
-  if (tOnOff > 0) S = 2;  // Force On prioritaire
-  if (tOnOff < 0) S = 1;  // Force Off
-  return S;               //0=NO (pas utilisé),1=OFF,2=ON,3=PW,4=Triac
-}
 byte Action::SelActEnCours(int Heure) {
   int S = 255;
   for (int i = 0; i < NbPeriode; i++) {
     if (Heure >= Hdeb[i] && Heure <= Hfin[i]) {
       S = SelAct[i];
-    }
-  }
-  return S;
-}
-int Action::Valmin(int Heure) {  //Retourne la valeur Vmin (ex seuil Triac) à cette heure
-  int S = 0;
-  for (int i = 0; i < NbPeriode; i++) {
-    if (Heure >= Hdeb[i] && Heure <= Hfin[i]) {
-      S = Vmin[i];
-    }
-  }
-  return S;
-}
-int Action::Valmax(int Heure) {  //Retourne la valeur Vmax (ex ouverture du Triac) à cette heure
-  int S = 0;
-  for (int i = 0; i < NbPeriode; i++) {
-    if (Heure >= Hdeb[i] && Heure <= Hfin[i]) {
-      S = Vmax[i];
     }
   }
   return S;
