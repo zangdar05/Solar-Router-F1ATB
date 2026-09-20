@@ -14,7 +14,10 @@ Chaque étape = tests hôte verts (`python test/run_tests.py`) + build PlatformI
 | 5 | `c59b506` | Code mort, tables multi-sinus figées | 1 732 479 | 91 440 | 645 |
 | 6 | `383e90f` | Docs : chiffrage flash par fonctionnalité | — | — | — |
 | 7 | `4aa2cdb` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
-| 9 | (voir git) | Raisons de reset du core 3.x (SW_CPU_RESET, EXT_CPU_RESET, TGWDT_CPU_RESET) ; page Données brutes : lignes NGTF, STGE, couleur Tempo du jour et du lendemain décodées depuis STGE | 1 732 815 | 92 904 | 686 |
+| 12 | `HEAD` | Linky auxiliaire : estimateur d'injection CACSI aussi sur l'auxiliaire, entité MQTT `Linky_Pw` (W signés), flux TIC auxiliaire affiché dans Données brutes (tableau Linky) | 1 733 507 | 92 904 | 690 |
+| 11 | `0214fb2` | MQTT : état publié dès que le Linky auxiliaire est actif, même sans source de puissance valide (Source = Pmqtt sans publication) | 1 732 815 | 92 904 | 690 |
+| 10 | `3c79fd1` | Linky auxiliaire : sauvegarde des paramètres corrigée (chaîne JS vs `\|` ArduinoJson), état d'exécution `LinkyAuxActif` séparé du paramètre | 1 732 807 | 92 904 | 690 |
+| 9 | `8bcdc36` | Raisons de reset du core 3.x (SW_CPU_RESET, EXT_CPU_RESET, TGWDT_CPU_RESET) ; page Données brutes : lignes NGTF, STGE, couleur Tempo du jour et du lendemain décodées depuis STGE | 1 732 815 | 92 904 | 686 |
 | 8 | `7f505fb` | Historique 1 an en flux direct, plafond des lignes de diagnostic CSV (tas à 276 o constaté sur un routeur réel) | 1 732 435 | 92 904 | 686 |
 
 Marge flash finale : **213 165 octets** (48 041 à l'origine).
@@ -52,9 +55,10 @@ Lire la TIC du Linky en permanence sur un UART dédié, indépendamment de la so
 4. Home Assistant : nouvelles entités `Linky …` sur l'appareil du routeur (discovery renouvelée toutes les 5 mn).
 
 ### 2.4 Limites
-- Un seul Linky auxiliaire ; pas de page « Données brutes » dédiée (le tampon de 1 Ko sert au décodage et au diagnostic Telnet).
+- Un seul Linky auxiliaire. La page Données brutes affiche son flux TIC (tableau Linky) en plus des données de la source (étape 12).
 - Les énergies journalières Linky (`EnergieJour_*`) ne sont pas calculées pour l'auxiliaire : à faire dans HA (utility meter) à partir de `Linky_EAST/EAIT`.
-- Le watchdog « puissance non reçue » reste lié à la source principale, par conception.
+- Le watchdog « puissance non reçue » reste lié à la source principale, par conception : en `Source = Pmqtt` sans publication sur `TopicP`, le routeur redémarre toutes les 2,5 min (constaté le 20/09 ; corrigé côté HA par une publication périodique).
+- Entités MQTT de l'auxiliaire : `Linky_EAST`, `Linky_EAIT`, `Linky_SINSTS`, `Linky_SINSTI`, `Linky_PuissanceS`, `Linky_PuissanceI` (estimation CACSI si `ReacCACSI = 100`), `Linky_Pw` (S − I), `Linky_URMS1`, `Linky_IRMS1` ; l'état est publié même sans source de puissance valide.
 - Non testé sur matériel : la trame TIC synthétique des tests couvre le décodage, pas la couche UART réelle (7E1, 9600) ni la charge du cœur 0 avec deux ports actifs (≈ 2 ms par appel, comme le Linky principal).
 
 ## 3. Étape 7 — patchs de bugs (`01_doc_technique.md` §8)

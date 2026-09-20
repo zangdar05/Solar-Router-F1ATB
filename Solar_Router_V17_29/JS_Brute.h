@@ -254,6 +254,81 @@ const char *PageBruteJS2 = R"====(
 
 const REFRESH_INTERVAL = 2000; // 2 secondes
 
+
+// Traite un morceau du flux TIC (source Linky ou Linky auxiliaire) : tableau + index suivant
+function TraiteLinky(morceau, idxSuivant) {
+        GID('infoLinky').style.display = "block";
+        if (!InitFait) {
+            InitFait = true;
+            if (typeof creerTableauLinky === 'function') creerTableauLinky();
+        }
+        
+        // Le message Linky peut être très fragmenté, donc on ajoute le nouveau morceau
+        MessageLinky += morceau;
+        
+        // Le séparateur de bloc de message Linky est le caractère STX (ASCII 2)
+        const blocs = MessageLinky.split(String.fromCharCode(2));
+        const lg = blocs.length;
+        
+        if (lg > 2) {
+            // Si on a au moins un bloc complet + le début du suivant
+            MessageLinky = String.fromCharCode(2) + blocs[lg - 1]; // Garde le début du dernier bloc pour la prochaine fois
+            const dataBlock = blocs[lg - 2];
+            
+            GH('DataLinky', '<pre>' + dataBlock + '</pre>');
+            
+            // Le séparateur de ligne est LF (ASCII 10)
+            const lignes = dataBlock.split(String.fromCharCode(10)); 
+            
+            for (let i = 0; i < lignes.length; i++) {
+                // Le séparateur de colonne est TAB (ASCII 9)
+                const colonnes = lignes[i].split(String.fromCharCode(9)); 
+                
+                if (colonnes[0] === 'DATE' && typeof LaDate === 'function') {
+                    GH('dateLinky', LaDate(colonnes[1]));
+                }
+                if (colonnes[0] === 'STGE') {
+                    // Registre de statuts : bits 24-25 = couleur Tempo du jour, 26-27 = lendemain
+                    const stge = parseInt(colonnes[1], 16);
+                    const coul = ["Non défini", "Bleu", "Blanc", "Rouge"];
+                    GID('LTEMPOJ').style.display = "table-row";
+                    GH('hTEMPOJ', coul[(stge >>> 24) & 3]);
+                    GID('LTEMPOD').style.display = "table-row";
+                    GH('hTEMPOD', coul[(stge >>> 26) & 3]);
+                }
+                
+                // Traitement des données Linky à partir du tableau L
+                for (let j = 0; j < L.length; j++) {
+                    if (colonnes[0] === L[j][0]) {
+                        // Vérifie si la donnée est affichable (pas masquée OU valeur > 0)
+                        const isVisible = !L[j][2] || parseInt(colonnes[1]) > 0;
+                        
+                        if (isVisible) {
+                            GID('L' + L[j][0]).style.display = "table-row";
+                            
+                            switch (L[j][4]) {
+                                case 0: // Valeur simple (ex: index)
+                                    GH(L[j][0], typeof LaVal === 'function' ? LaVal(colonnes[1]) : colonnes[1]);
+                                    break;
+                                case 1: // Valeur avec horodatage (ex: PMAX)
+                                    GH('h' + L[j][0], typeof LaDate === 'function' ? LaDate(colonnes[1]) : colonnes[1]);
+                                    GH(L[j][0], typeof LaVal === 'function' ? LaVal(colonnes[2]) : colonnes[2]);
+                                    break;
+                                case 2: // Texte
+                                    GH('h' + L[j][0], colonnes[1]);
+                                    break;
+                            }
+                        }
+                        break; // Sortir de la boucle L.length
+                    }
+                }
+            }
+            GID('LED').style.display = 'none'; // Re-masquer l'indicateur après traitement Linky
+        }
+        
+    IdxMessage = idxSuivant;
+}
+
 async function LoadData() {
     // Affiche l'indicateur de chargement
       GID("LED").style.display = "block";
@@ -441,83 +516,18 @@ async function LoadData() {
                 break;
 
             case "Linky":
-                GID('infoLinky').style.display = "block";
-                if (!InitFait) {
-                    InitFait = true;
-                    if (typeof creerTableauLinky === 'function') creerTableauLinky();
-                }
-                
-                // Le message Linky peut être très fragmenté, donc on ajoute le nouveau morceau
-                MessageLinky += groupes[1];
-                
-                // Le séparateur de bloc de message Linky est le caractère STX (ASCII 2)
-                const blocs = MessageLinky.split(String.fromCharCode(2));
-                const lg = blocs.length;
-                
-                if (lg > 2) {
-                    // Si on a au moins un bloc complet + le début du suivant
-                    MessageLinky = String.fromCharCode(2) + blocs[lg - 1]; // Garde le début du dernier bloc pour la prochaine fois
-                    const dataBlock = blocs[lg - 2];
-                    
-                    GH('DataLinky', '<pre>' + dataBlock + '</pre>');
-                    
-                    // Le séparateur de ligne est LF (ASCII 10)
-                    const lignes = dataBlock.split(String.fromCharCode(10)); 
-                    
-                    for (let i = 0; i < lignes.length; i++) {
-                        // Le séparateur de colonne est TAB (ASCII 9)
-                        const colonnes = lignes[i].split(String.fromCharCode(9)); 
-                        
-                        if (colonnes[0] === 'DATE' && typeof LaDate === 'function') {
-                            GH('dateLinky', LaDate(colonnes[1]));
-                        }
-                        if (colonnes[0] === 'STGE') {
-                            // Registre de statuts : bits 24-25 = couleur Tempo du jour, 26-27 = lendemain
-                            const stge = parseInt(colonnes[1], 16);
-                            const coul = ["Non défini", "Bleu", "Blanc", "Rouge"];
-                            GID('LTEMPOJ').style.display = "table-row";
-                            GH('hTEMPOJ', coul[(stge >>> 24) & 3]);
-                            GID('LTEMPOD').style.display = "table-row";
-                            GH('hTEMPOD', coul[(stge >>> 26) & 3]);
-                        }
-                        
-                        // Traitement des données Linky à partir du tableau L
-                        for (let j = 0; j < L.length; j++) {
-                            if (colonnes[0] === L[j][0]) {
-                                // Vérifie si la donnée est affichable (pas masquée OU valeur > 0)
-                                const isVisible = !L[j][2] || parseInt(colonnes[1]) > 0;
-                                
-                                if (isVisible) {
-                                    GID('L' + L[j][0]).style.display = "table-row";
-                                    
-                                    switch (L[j][4]) {
-                                        case 0: // Valeur simple (ex: index)
-                                            GH(L[j][0], typeof LaVal === 'function' ? LaVal(colonnes[1]) : colonnes[1]);
-                                            break;
-                                        case 1: // Valeur avec horodatage (ex: PMAX)
-                                            GH('h' + L[j][0], typeof LaDate === 'function' ? LaDate(colonnes[1]) : colonnes[1]);
-                                            GH(L[j][0], typeof LaVal === 'function' ? LaVal(colonnes[2]) : colonnes[2]);
-                                            break;
-                                        case 2: // Texte
-                                            GH('h' + L[j][0], colonnes[1]);
-                                            break;
-                                    }
-                                }
-                                break; // Sortir de la boucle L.length
-                            }
-                        }
-                    }
-                    GID('LED').style.display = 'none'; // Re-masquer l'indicateur après traitement Linky
-                }
-                
-                // Mettre à jour l'index de message pour la prochaine requête
-                IdxMessage = groupes[2];
+                TraiteLinky(groupes[1], groupes[2]);
                 break;
                 
             default:
                 // Si la Source_data est inconnue, ne rien faire
                 console.log(`Source de données inconnue : ${Source_data}`);
                 break;
+        }
+        // Linky auxiliaire (lecture seule) : flux TIC ajouté après les données de la source
+        const iAux = groupes.indexOf("LinkyAux");
+        if (iAux > 0 && iAux + 2 < groupes.length) {
+            TraiteLinky(groupes[iAux + 1], groupes[iAux + 2]);
         }
 
     } catch (error) {

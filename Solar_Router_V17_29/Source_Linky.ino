@@ -246,9 +246,10 @@ void DecodeGroupeTIC(TicData &tic, const String &code, const String &val, bool c
   if (code.indexOf("SINSTS1") == 0) { tic.SINSTS1 = val.toInt(); return; }
   if (code.indexOf("SINSTS2") == 0) { tic.SINSTS2 = val.toInt(); return; }
   if (code.indexOf("SINSTS3") == 0) { tic.SINSTS3 = val.toInt(); return; }
-  if (code == "SMAXSN" && principal && ReacCACSI == 100) {  // Estimateur d'injection CACSI
-    PuissanceI_M = 0;
-    if (PuissanceS_M == 0) {  // estimation de la puissance d'injection si PuissanceS_M==0
+  if (code == "SMAXSN" && ReacCACSI == 100) {  // Estimateur d'injection CACSI (le Linky ne fournit pas SINSTI)
+    int Psout = principal ? PuissanceS_M : tic.PuissanceS;
+    int Pinj = 0;
+    if (Psout == 0) {  // estimation de la puissance d'injection si rien n'est soutiré
       int pPuissance;
       if (tic.IRMS3 != -1) {  // triphasé
         pPuissance = 150 + (tic.SINSTS1 == 0 ? -1 : 1) * tic.URMS1 * tic.IRMS1;  // marge de 150W
@@ -257,8 +258,14 @@ void DecodeGroupeTIC(TicData &tic, const String &code, const String &val, bool c
       } else {
         pPuissance = 150 + (tic.SINSTS == 0 ? -1 : 1) * tic.URMS1 * tic.IRMS1;
       }
-      if (pPuissance < 0) PuissanceI_M = -pPuissance;  // "-" car on donne la valeur injectée
-      PVAI_M = PuissanceI_M;                            //On egalise Pw et PVA
+      if (pPuissance < 0) Pinj = -pPuissance;  // "-" car on donne la valeur injectée
+    }
+    if (principal) {
+      PuissanceI_M = Pinj;
+      PVAI_M = Pinj;  //On egalise Pw et PVA
+    } else {
+      tic.PuissanceI = Pinj;  //Publié en MQTT (Linky_PuissanceI, Linky_Pw) pour une régulation "estimation CACSI" via HA
+      tic.PVAI = Pinj;
     }
     return;
   }

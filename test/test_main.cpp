@@ -323,7 +323,7 @@ static void test_linky_aux() {
   int nbLinky = 0;
   for (auto &m : mock_mqtt_published)
     if (m.topic.find("_Linky_") != std::string::npos) nbLinky++;
-  CHECK_EQ(nbLinky, 8);
+  CHECK_EQ(nbLinky, 9);
   mock_mqtt_published.clear();
   SendDataToHomeAssistant();
   CHECK_EQ((int)mock_mqtt_published.size(), 1);

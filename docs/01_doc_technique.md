@@ -163,7 +163,7 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 - Topic état : `<MQTTPrefixEtat>/<MQTTdeviceName>_state` (JSON plat), disponibilité `<MQTTPrefixEtat>/<device>/Available`.
 - Discovery : `<MQTTPrefix>/sensor|binary_sensor/<device>_<Var>/config`.
 - Entrées : `TopicP` (puissance, seulement si `Source == "Pmqtt"`), `TopicT[c]` (températures), `<device>/<TitreAction>` (ordres, si `subMQTT == 1`).
-- Contenu Linky publié (si `Source == "Linky"`) : LTARF, Code_Tarifaire, NGTF, STGE, EASF01-10, Energie_M_*, PuissanceS/I_M, Tension_M, Intensite_M, PowerFactor_M.
+- Contenu Linky publié si `Source == "Linky"` **ou Linky auxiliaire actif** (`LinkyDisponible()`) : LTARF, Code_Tarifaire, NGTF, STGE, EASF01-10 ; en auxiliaire s'ajoutent `Linky_EAST/EAIT`, `Linky_SINSTS/SINSTI`, `Linky_PuissanceS/I`, `Linky_Pw`, `Linky_URMS1/IRMS1` (voir `05_journal_modifications.md` §2). Avec `Source == "Linky"` : Energie_M_*, PuissanceS/I_M, Tension_M, Intensite_M, PowerFactor_M.
 
 ## 7. Limites actuelles du projet
 | Limite | Conséquence |

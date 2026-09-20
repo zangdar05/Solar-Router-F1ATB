@@ -237,6 +237,7 @@ void sendMQTTDiscoveryMsg_global() {
     DeviceToDiscover("Linky_SINSTI", "Linky VA Injectés", "VA", "apparent_power", "0");
     DeviceToDiscover("Linky_PuissanceS", "Linky Puissance Soutirée", "W", "power", "0");
     DeviceToDiscover("Linky_PuissanceI", "Linky Puissance Injectée", "W", "power", "0");
+    DeviceToDiscover("Linky_Pw", "Linky Puissance nette (+soutirée / -injectée)", "W", "power", "0");
     DeviceToDiscover("Linky_URMS1", "Linky Tension", "V", "voltage", "0");
     DeviceToDiscover("Linky_IRMS1", "Linky Intensité", "A", "current", "0");
   }
@@ -426,8 +427,8 @@ void SendDataToHomeAssistant() {
       len += snprintf(value + len, RESTE(len, value), ",\"EASF%02d\":%ld", i + 1, tic.EASF[i]);
     }
     if (LinkyAuxActif && Source != "Linky") {
-      len += snprintf(value + len, RESTE(len, value), ",\"Linky_EAST\":%ld,\"Linky_EAIT\":%ld,\"Linky_SINSTS\":%d,\"Linky_SINSTI\":%d,\"Linky_PuissanceS\":%d,\"Linky_PuissanceI\":%d,\"Linky_URMS1\":%d,\"Linky_IRMS1\":%d",
-                      tic.EAST, tic.EAIT, tic.SINSTS, tic.SINSTI, tic.PuissanceS, tic.PuissanceI, tic.URMS1, tic.IRMS1);
+      len += snprintf(value + len, RESTE(len, value), ",\"Linky_EAST\":%ld,\"Linky_EAIT\":%ld,\"Linky_SINSTS\":%d,\"Linky_SINSTI\":%d,\"Linky_PuissanceS\":%d,\"Linky_PuissanceI\":%d,\"Linky_Pw\":%d,\"Linky_URMS1\":%d,\"Linky_IRMS1\":%d",
+                      tic.EAST, tic.EAIT, tic.SINSTS, tic.SINSTI, tic.PuissanceS, tic.PuissanceI, tic.PuissanceS - tic.PuissanceI, tic.URMS1, tic.IRMS1);
     }
   }
   if (Source == "Enphase") {
