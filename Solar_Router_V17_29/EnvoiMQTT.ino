@@ -109,7 +109,7 @@ void envoiVersMQTT() {
     if (!Discovered) {  //(uniquement au démarrage discovery = 0 et toute les 5mn si HA redemarre)
       sendMQTTDiscoveryMsg_global();
     }
-    if (EnergieActiveValide) SendDataToHomeAssistant();  // envoie du Payload au State topic
+    if (EnergieActiveValide || LinkyAuxActif) SendDataToHomeAssistant();  // envoie du Payload au State topic (Linky auxiliaire : même sans source de puissance)
     clientMQTT.loop();
   }
 }
