@@ -5,3 +5,4 @@
 *.map
 __pycache__/
 test/build/
+perso/
