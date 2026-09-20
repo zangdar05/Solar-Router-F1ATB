@@ -27,7 +27,8 @@
 | Sujet | Fichier |
 |---|---|
 | Globales, setup/loop, régulation PID, ISR | `Solar_Router_V17_29.ino` |
-| Décodage TIC Linky | `Source_Linky.ino` |
+| Décodage TIC Linky (source principale et Linky auxiliaire `LinkyAux`) | `Linky.h`, `Source_Linky.ino` |
+| Journal des modifications depuis V17.29 | `docs/05_journal_modifications.md` |
 | MQTT (discovery HA, état, souscriptions) | `EnvoiMQTT.ino`, `Source_MQTT.ino` |
 | Paramètres JSON (LittleFS) | `Stockage.ino` |
 | Serveur web + endpoints AJAX | `Server.ino` |

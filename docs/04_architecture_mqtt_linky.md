@@ -1,5 +1,7 @@
 # Découpler la lecture Linky du routage — solutions
 
+> **État : la solution S1 est implémentée** (commit `3eb0485`, voir `05_journal_modifications.md` §2 pour le détail, le câblage et les limites). Les sections ci-dessous décrivent l'analyse d'origine et les alternatives.
+
 Objectif : remonter les données Linky (index, tarif, tension, courant, statut Tempo) vers Home Assistant en MQTT, **tout en** régulant le routage à partir d'une autre mesure (JSY-MK-194 précis, puissance reçue en MQTT, Shelly…), ou inversement piloter les Actions par MQTT tout en gardant la lecture Linky.
 
 ## 1. Pourquoi c'est impossible aujourd'hui

@@ -25,9 +25,10 @@ Mesures : `python -m platformio run` (core ESP32 3.3.12, `partitions.csv` du pro
 | 1 Corrections de bugs (B1, B2, B3, Vmin/Vmax, CSV) | `66d6c0f` | 1 898 435 | +876 | 97,6 % | 91 760 |
 | 2 Pages web gzip | `500dd0d` | 1 733 583 | **−164 852** | 89,1 % | 91 648 |
 | 3 Code mort + tables multi-sinus | `c59b506` | 1 732 479 | −1 104 | 89,0 % | 91 440 |
-| **Total** | | **1 732 479** | **−165 080 (−8,7 %)** | | −320 |
+| 4 Linky auxiliaire (S1) + patchs + parseurs Enphase | `3eb0485` | 1 734 015 | +1 536 | 89,1 % | 92 904 |
+| **Total** | | **1 734 015** | **−163 544 (−8,6 %)** | | +1 144 |
 
-Marge disponible : **213 121 octets** (au lieu de 48 041), soit de quoi ajouter le « Linky auxiliaire » (`04_architecture_mqtt_linky.md`, ≈ 6 Ko), un second UART, des entités HA supplémentaires, etc.
+Marge disponible : **211 585 octets** (au lieu de 48 041), soit de quoi ajouter le « Linky auxiliaire » (`04_architecture_mqtt_linky.md`, ≈ 6 Ko), un second UART, des entités HA supplémentaires, etc.
 
 ## 3. Détail des optimisations réalisées
 

@@ -168,8 +168,8 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 ## 7. Limites actuelles du projet
 | Limite | Conséquence |
 |---|---|
-| **Une seule source** (`Source`) alimente à la fois la régulation, l'affichage, les énergies et MQTT | Impossible de lire le Linky (index, tarif, tension) tout en régulant sur un JSY (UxIx2) ou sur une puissance MQTT ; impossible de publier les données Linky vers HA quand la régulation vient d'ailleurs |
-| Un seul port série applicatif `MySerial` (UART2) | Linky et JSY sont mutuellement exclusifs sur le même ESP |
+| **Une seule source** (`Source`) alimente la régulation, l'affichage et les énergies | **Levée partiellement** : le Linky auxiliaire (`LinkyAux`, `Linky.h`) lit la TIC sur un second UART et publie index/tarif/Tempo en MQTT quelle que soit la source (voir `05_journal_modifications.md` §2). Les autres combinaisons (Shelly + JSY…) restent exclusives |
+| Port série applicatif `MySerial` (UART2) pour la source ; `SerialAux` (UART1, RX seul) pour le Linky auxiliaire | Un JSY et un Linky peuvent coexister (JSY = source, Linky = auxiliaire) |
 | MQTT sortant et souscription seulement en mode expert | Le mode standard écrase `MQTTRepet`/`subMQTT` à 0 |
 | Puissance MQTT entrante ignorée si `Source != "Pmqtt"` | Pas de « source secondaire » |
 | Régulation et serveur web sur le même cœur avec des appels bloquants (`CallExterne` 5 s, `waitForConnectResult` 10 s, Shelly/RTE) | Gel possible de la régulation à 200 ms pendant plusieurs secondes |
