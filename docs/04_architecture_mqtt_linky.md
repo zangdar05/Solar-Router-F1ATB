@@ -71,7 +71,7 @@ Câblage : RX aux sur un GPIO libre (ex. 26 ou 5 selon carte) via le même monta
 | Tarif/Tempo pour Actions | via Ext | oui | oui | oui | non |
 | Pilotage Actions MQTT | oui (expert) | oui | oui | oui | oui |
 
-Recommandation : **S1** (avec S2 comme cas d'usage), après avoir libéré la flash (voir `03_optimisation_flash.md`) ; S0 en attendant.
+Recommandation : **S1** (avec S2 comme cas d'usage). La flash libérée (213 Ko de marge après `03_optimisation_flash.md`) couvre largement les +6 Ko nécessaires ; S0 en attendant l'implémentation.
 
 ## 4. Autres fonctions intéressantes dans la même veine
 - **Autoriser `MQTTRepet`/`subMQTT` en mode standard** : une ligne dans `SerializeConfiguration()`/`EcritureEnROM()` ; la plupart des utilisateurs HA n'ont pas besoin du mode expert.

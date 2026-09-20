@@ -209,4 +209,9 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 | B22 | `JS_Actions.h:391-465` | `touchMove/mouseMove/NewPosition` : code mort (≈ 2,6 Ko) | Flash |
 | B23 | `PagePara.h:27` | Sélecteur CSS `#ligneTopicT` mort (ids réels `ligneTopicT0..3`) | Info |
 
-Les bugs B1, B2, B3 sont corrigés dans la branche de travail (voir `03_optimisation_flash.md` et le journal git) avec test de non-régression associé.
+| B24 | `Solar_Router_V17_29.ino` (setup) | Les tables multi-sinus littérales étaient écrasées au boot par un recalcul donnant 79 valeurs différentes sur 101 | Info (corrigé : tables figées aux valeurs calculées) |
+| B25 | `Stockage.ino:Record_Data` | `Record_Conf` non renseigné à la création du CSV mensuel : en-tête réécrit au 2ᵉ enregistrement | Faible (corrigé) |
+| B26 | `Actions.cpp:ParaEnCours` | `P.Vmin`/`P.Vmax` non initialisés hors période (non lus tant que `Type <= 1`) | Latent (corrigé) |
+| B27 | `Source_Externe.ino:45` | Réponse > 400 caractères jetée silencieusement ; une trame bi-sonde + en-têtes HTTP s'en approche | Faible |
+
+Corrigés dans ce dépôt (commit `66d6c0f`, tests associés) : B1, B2, B3, B25, B26. Les autres sont documentés, non corrigés (pas de matériel de validation ou hors périmètre). Voir `03_optimisation_flash.md` pour les mesures et `test/README.md` pour la non-régression.

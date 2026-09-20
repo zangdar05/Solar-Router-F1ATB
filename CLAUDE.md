@@ -14,6 +14,7 @@
 - Taille flash : voir `docs/03_optimisation_flash.md` (mesure de référence et après chaque modification).
 
 ## Règles de travail
+- Pages web : éditer `Page*.h`/`JS_*.h` (sources), puis **`python tools/gen_web_gz.py`** pour régénérer `WebGz.h` (servi gzip). Les sources ne sont plus compilées (`WEB_GZ`).
 - Toute modification du firmware : 1) `python test/run_tests.py` vert, 2) `python -m platformio run` compile, 3) noter la taille flash/RAM avant/après dans `docs/03_optimisation_flash.md`, 4) commit git avec message explicite.
 - Ne jamais changer le format de `parametres.json`, des séparateurs AJAX (GS/RS/US/FS/ES = chr 29/30/31/28/27) ni des topics MQTT sans mettre à jour le JS embarqué, les tests et la doc.
 - Les `.ino` n'ont pas de prototypes : l'IDE les génère. Le harnais de test les fournit dans `test/mock/prototypes.h` — l'ajout d'une fonction appelée avant sa définition doit y être ajouté.

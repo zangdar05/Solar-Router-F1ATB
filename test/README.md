@@ -10,6 +10,9 @@ Aucun fichier de `Solar_Router_V17_29/` n'est modifié.
 python test/run_tests.py
 ```
 
+- Vérifie d'abord que `Solar_Router_V17_29/WebGz.h` (pages web gzip) est à jour
+  par rapport aux sources `Page*.h`/`JS_*.h` (`tools/gen_web_gz.py --check`) ;
+  sinon relancer `python tools/gen_web_gz.py`.
 - Compile puis exécute ; le code de sortie est celui des tests (0 = tout passe).
 - Le binaire est produit dans `test/build/tests.exe`.
 - `C:\msys64\mingw64\bin` est ajouté au `PATH` par le script : sans cela,
@@ -65,6 +68,9 @@ python test/run_tests.py
   `ARDUINOJSON_ENABLE_ARDUINO_STRING=1` est activé.
 - `CST820.h` et `initGT911.h` réels (dossier du sketch) sont utilisés tels
   quels ; seul `Wire.h` est bouchonné.
+- Les tableaux `const` du sketch visibles des tests (ex. `tabPulseSinusTotal`)
+  sont déclarés `extern const` dans le `.ino` (liaison externe) et dans
+  `mock/firmware_globals.h`.
 - `setup()` n'est **jamais** appelé par les tests (il enchaîne WiFi, écran,
   tâches). Chaque test remet lui-même à zéro l'état global dont il a besoin
   via `reset_commun()`.
