@@ -570,6 +570,15 @@ void Record_Data(String dateAMJ, String MesSage, int16_t HeureCouranteDeci_) {
     LittleFS.remove("/" + S);  //On retire le fichier du mois le plus vieux
   }
   String AM_file = "/Mois_Wh_" + dateAMJ.substring(0, 6) + ".csv";
+  // Les lignes de diagnostic (resets) ne sont plus ajoutées au-delà de 16 Ko : un routeur
+  // qui redémarre toutes les 5 mn produisait un CSV de 60 Ko, illisible sans épuiser la RAM.
+  // Les lignes quotidiennes (MesSage == date) sont toujours écrites.
+  if (MesSage != dateAMJ && LittleFS.exists(AM_file)) {
+    File f = LittleFS.open(AM_file, "r");
+    size_t taille = f.size();
+    f.close();
+    if (taille > 16384) return;
+  }
   bool biSonde = false;
   if (nomSondeFixe != "" && (Source_data == "UxIx2" || ((Source_data == "ShellyEm" || Source_data == "ShellyPro") && EnphaseSerial.toInt() != 3))) biSonde = true;
 

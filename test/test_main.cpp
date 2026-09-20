@@ -1160,6 +1160,52 @@ static void test_energie_quotidienne() {
 // ===========================================================================
 // 10. Record_Data : historique CSV mensuel
 // ===========================================================================
+// Historique 1 an : flux chunké sans JsonDocument ; limitation des lignes de diagnostic
+static void test_histo1an() {
+  reset_commun();
+  DateAMJ = "20260920";
+  mock_fs["/Mois_Wh_202609.csv"] = "Date,Maison / Soutiree,Maison / Injectee,,,Heure Deci. ,Message\r\n"
+                                   "20260918,719,0,,,23.98,20260918\r\n"
+                                   "20260919,1282,5,,,16.96,Reset \"Web\"\r\n";
+  mock_fs["/Mois_Wh_202608.csv"] = "Date,x\r\n20260831,100,1,,,23.98,20260831\r\n";
+  mock_client_request.clear();
+  WebServer srv;
+  envoyerHistoriqueEnergie(srv);
+  // Retire l'encodage chunked (taille hex CRLF ... CRLF, puis 0 CRLF CRLF)
+  std::string raw = mock_client_request, body;
+  size_t pos = 0;
+  while (pos < raw.size()) {
+    size_t eol = raw.find("\r\n", pos);
+    if (eol == std::string::npos) break;
+    long n = strtol(raw.substr(pos, eol - pos).c_str(), nullptr, 16);
+    if (n == 0) break;
+    body += raw.substr(eol + 2, n);
+    pos = eol + 2 + n + 2;
+  }
+  JsonDocument doc;
+  CHECK(deserializeJson(doc, body.c_str()) == DeserializationError::Ok);
+  JsonArray arr = doc["EnergieJour"].as<JsonArray>();
+  CHECK_EQ((int)arr.size(), 3);
+  CHECK_STR(String(arr[0].as<const char *>()), "20260831,100,1,,,23.98,20260831");
+  CHECK_STR(String(arr[2].as<const char *>()), "20260919,1282,5,,,16.96,Reset \"Web\"");
+  // Aucun fichier : {"EnergieJour":""} comme l'ancienne version
+  mock_fs_reset();
+  mock_client_request.clear();
+  envoyerHistoriqueEnergie(srv);
+  CHECK(mock_client_request.find("{\"EnergieJour\":\"\"}") != std::string::npos);
+
+  // Record_Data : au-delà de 16 Ko, seules les lignes quotidiennes sont ajoutées
+  reset_commun();
+  Source_data = "Linky";
+  nomSondeMobile = "Maison";
+  mock_fs["/Mois_Wh_202609.csv"] = std::string(17000, 'x');
+  size_t avant = mock_fs["/Mois_Wh_202609.csv"].size();
+  Record_Data("20260920", "Puissances non reçues => Reset", 1230);
+  CHECK_EQ(mock_fs["/Mois_Wh_202609.csv"].size(), avant);
+  Record_Data("20260920", "20260920", 2398);
+  CHECK(mock_fs["/Mois_Wh_202609.csv"].size() > avant);
+}
+
 static void test_record_data() {
   reset_commun();
   Source_data = "Linky";
@@ -1217,6 +1263,7 @@ int main() {
   RUN(test_source_externe);
   RUN(test_energie_quotidienne);
   RUN(test_record_data);
+  RUN(test_histo1an);
   RUN(test_web_gzip);
 
   printf("--------------------------------------------------------------\n");

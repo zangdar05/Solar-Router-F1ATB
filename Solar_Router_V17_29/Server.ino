@@ -1010,19 +1010,27 @@ class ChunkedWriter : public Print {
 };
 
 void envoyerHistoriqueEnergie(WebServer &serverRef) {
-  JsonDocument doc;
-
-  // //Vue par jour/mois Soutiré et Injecté (LittleFS)
+  // Vue par jour/mois Soutiré et Injecté (LittleFS), 3 derniers mois.
+  // Flux direct ligne par ligne : l'ancien JsonDocument chargeait tout le CSV en RAM
+  // (un fichier de 60 Ko laissait 276 octets de tas libre).
   int M0 = DateAMJ.substring(4, 6).toInt();
   int an0 = DateAMJ.substring(0, 4).toInt();
   String ligne;
-  ligne.reserve(64);
+  ligne.reserve(96);
+
+  serverRef.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  serverRef.sendHeader("Transfer-Encoding", "chunked");
+  serverRef.send(200, "application/json", "");
+
+  NetworkClient client = serverRef.client();
+  ChunkedWriter writer(client);
+  bool premier = true;
 
   for (int M = -2; M <= 0; M++) {
     int M1 = M0 + M;
     int an1 = an0;
     if (M1 < 1) { M1 += 12; an1--; }
-    
+
     char fileName[32];
     snprintf(fileName, sizeof(fileName), "/Mois_Wh_%04d%02d.csv", an1, M1);
 
@@ -1032,26 +1040,18 @@ void envoyerHistoriqueEnergie(WebServer &serverRef) {
         ligne = file.readStringUntil('\n');
         ligne.trim();
         if (ligne.length() > 10 && ligne.indexOf("Date,") == -1) {
-          doc["EnergieJour"].add(ligne);
+          writer.print(premier ? "{\"EnergieJour\":[\"" : ",\"");
+          premier = false;
+          ligne.replace("\\", "\\\\");  // échappement JSON minimal (message libre)
+          ligne.replace("\"", "\\\"");
+          writer.print(ligne);
+          writer.print("\"");
         }
       }
       file.close();
     }
   }
-
-  if (doc["EnergieJour"].isNull()) doc["EnergieJour"] = "";
-
-  serverRef.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  serverRef.sendHeader("Transfer-Encoding", "chunked");
-  serverRef.send(200, "application/json", ""); 
-
-  NetworkClient client = serverRef.client(); 
-  ChunkedWriter writer(client);
-  
-  // Sérialisation directe
-  serializeJson(doc, writer);
-
-  //envoie le marqueur "0"
-  writer.finalise();
+  writer.print(premier ? "{\"EnergieJour\":\"\"}" : "]}");  // vide : même forme qu'avant
+  writer.finalise();  // marqueur de fin "0"
 }
 
