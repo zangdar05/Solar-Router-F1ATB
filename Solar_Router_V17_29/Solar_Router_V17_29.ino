@@ -368,6 +368,7 @@
 #include <EthernetESP32.h>
 #include <esp_wps.h>  //Librairie WPS pour appairage automatique connexion WiFi //SR19
 #include "Actions.h"
+#include "Linky.h"  // Décodage TIC partagé (source principale / Linky auxiliaire)
 #include "FS.h"
 #include "LittleFS.h"
 #include <ArduinoJson.h>
@@ -613,37 +614,23 @@ double Energie_M_Injectee_double = 0.0;
 long Temps_precedent = 0;  // mesure précise du temps entre deux appels au JSY-MK-333
 float PW_M1, PW_M2, PW_M3;
 
-//Parameters for Linky
-bool LFon = false;
-bool EASTvalid = false;
-bool EAITvalid = false;
-volatile int IdxDataRawLinky = 0;
-volatile int IdxBufDecodLinky = 0;
-volatile char DataRawLinky[4000];  //Buffer entrée données Linky
-float moyPWS = 0;
-float moyPWI = 0;
-float moyPVAS = 0;
-float moyPVAI = 0;
-float COSphiS = 1;
-float COSphiI = 1;
-long TlastEASTvalide = 0;
-long TlastEAITvalide = 0;
+//Parameters for Linky (le décodage vit dans TicData, Source_Linky.ino)
+volatile int IdxDataRawLinky = 0;   //Index d'écriture, exposé à la page Données brutes
+volatile char DataRawLinky[4000];  //Buffer entrée données Linky principal
 String LTARF = "";  //Option tarifaire RTE
 String STGE = "";   //Status Linky
-String STGEt = "";  //Status Tempo uniquement RTE
+String STGEt = "";  //Status Tempo (Linky : 2e caractère de STGE, ou RTE)
 String NGTF = "";   //Calendrier tarifaire
 String RTE_Jour = "NON_DEFINI";
 String RTE_Demain = "NON_DEFINI";
-long EASF01 = 0;
-long EASF02 = 0;
-long EASF03 = 0;
-long EASF04 = 0;
-long EASF05 = 0;
-long EASF06 = 0;
-long EASF07 = 0;
-long EASF08 = 0;
-long EASF09 = 0;
-long EASF10 = 0;
+//Linky auxiliaire : lecture seule sur un second UART (RX seul), indépendante de Source
+HardwareSerial SerialAux(1);
+byte LinkyAux = 0;      //1 = actif
+byte pSerialAux = 0;    //Index dans RX2_[] du GPIO RX
+bool LinkyAuxPerdu = false;
+TicData ticPrincipal;                //Décodage TIC de la source principale (Source == "Linky")
+TicData ticAux;                      //Décodage TIC du Linky auxiliaire
+volatile char DataRawLinkyAux[1024];  //Tampon circulaire du Linky auxiliaire
 
 //Paramètres for Enphase-Envoy-Smetered
 String TokenEnphase = "";
@@ -1286,6 +1273,15 @@ void setup() {
   } else {
     Source_data = Source;
   }
+  //Linky auxiliaire (lecture seule vers MQTT) : jamais sur les GPIO du port série 2
+  if (LinkyAux == 1) {
+    if (pSerialAux == 0 || Source == "Linky" || RX2_[pSerialAux] == RXD2 || RX2_[pSerialAux] == TXD2) {
+      StockMessage("Linky auxiliaire ignoré : GPIO non défini, en conflit avec le port série 2, ou source déjà Linky");
+      LinkyAux = 0;
+    } else {
+      Setup_LinkyAux();
+    }
+  }
   LireSerial();
 
 
@@ -1351,6 +1347,7 @@ void Task_LectureRMS(void *pvParameters) {
   }
   for (;;) {
     unsigned long tps = millis();
+    if (LinkyAux == 1) LectureLinkyAux();
     float deltaT = float(tps - previousTimeRMS);
     previousTimeRMS = tps;
     previousTimeRMSMin = min(previousTimeRMSMin, deltaT);
@@ -1681,6 +1678,13 @@ void loop() {
       erreurTriac = false;
     }
     if (ESP32_Type == 0) StockMessage("! Carte ESP32 non définie !");
+    if (LinkyAux == 1) {  //Diagnostic Linky auxiliaire
+      bool perdu = (ticAux.nbTrames == 0) || (millis() - ticAux.lastFrameMs > 60000);
+      if (perdu && !LinkyAuxPerdu) StockMessage("Linky auxiliaire : aucune trame depuis 60 s");
+      if (!perdu && LinkyAuxPerdu) StockMessage("Linky auxiliaire : trames de nouveau reçues");
+      LinkyAuxPerdu = perdu;
+      TelnetPrintln("Linky auxiliaire : " + String(ticAux.nbTrames) + " trames, " + String(ticAux.nbErrChecksum) + " erreurs checksum, EAST=" + String(ticAux.EAST) + " EAIT=" + String(ticAux.EAIT));
+    }
     if (pSerial == 0 && (Source == "UxIx2" || Source == "UxIx3" || Source == "Linky")) StockMessage("! Port série non défini !");
   }
 

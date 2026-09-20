@@ -201,6 +201,26 @@ const char *ParaHtml = R"====(
           </select>
         </div>
 
+        <div class="ligne" id="LinkyAuxL">
+          <label for="LinkyAux">Linky auxiliaire <span class="fsize10">Lecture seule du compteur (index, tarif, Tempo) vers MQTT, en plus de la source de mesure</span></label>
+          <select id="LinkyAux" onclick="checkDisabled();">
+            <option value="0" selected>Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+
+        <div class="ligne" id="LinkyAuxPin">
+          <label for="pSerialAux">GPIO RX du Linky auxiliaire <span class="fsize10">Différent du port série 2</span></label>
+          <select id="pSerialAux">
+            <option value="0" selected>Non défini</option>
+            <option value="1">RX=gpio 16</option>
+            <option value="2">RX=gpio 26</option>
+            <option value="3">RX=gpio 18</option>
+            <option value="4">RX=gpio 5</option>
+            <option value="5">RX=gpio 21</option>
+          </select>
+        </div>
+
         <div class="ligne" id="Analog">
           <label for="pUxI">GPIOs Entrées analogiques</label>
           <select id="pUxI" onclick="checkDisabled();">

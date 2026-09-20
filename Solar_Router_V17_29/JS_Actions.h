@@ -95,7 +95,7 @@ function TracePlanning(iAct) {
     // Sélecteur de sortie (niveau logique)
     let SelectOut = "<div id='SelectOut" + iAct + "'>Sortie 'On' <select id='selectOut" + iAct + "' title='Dépend du relais. En général +3.3V'><option value=0>0V</option><option value=1 selected>3.3V</option></select></div>";
 
-    let S = "<div class='titre'><span id ='titre" + iAct + "' onclick='editTitre(" + iAct + ")' title='Donnez un nom ou effacez pour supprimer l'action'>Titre</span></div>";
+    let S = "<div class='titre'><span id ='titre" + iAct + "' onclick='editTitre(" + iAct + ")' title='Donnez un nom ou effacez pour supprimer l&#39;action'>Titre</span></div>";
     S += "<div class='visu' onclick='Plot(" + iAct + ")' id='visu" + iAct + "' title='Zoom sur la régulation en temps réel. Les réglages peuvent être modifiés. Ne pas oublier de sauvegarder'>&#128200;</div>";
     S += "<div class='mode'><div class='TitZone' title='Choix du mode de découpe du secteur'>Mode</div>" + Radio0 + Radio1 + "</div>";
     S += "<div id='blocPlanning" + iAct + "'>";
@@ -283,7 +283,7 @@ function TracePeriodes(iAct) {
         if (i < action.Periodes.length - 1) {
             
            
-            S += "<div class='handleStyle' ' data-action='" + iAct + "' data-periode='" + i + "' ";
+            S += "<div class='handleStyle' data-action='" + iAct + "' data-periode='" + i + "' ";
             S += "onmousedown='startDrag(this,event," + iAct + "," + i + ");' ";
             S += "ontouchstart='startDrag(this,event," + iAct + "," + i + ");'>|||</div>";
         }
@@ -1154,7 +1154,7 @@ function SetParaFixe(){
     ShowAction();
 
     if (F.ReacCACSI < 100) {
-        GID("CACSI" + F.ReacCACSI).checked = true; //Reactivité Ki CACSI et non Estimation
+        if (GID("CACSI" + F.ReacCACSI)) GID("CACSI" + F.ReacCACSI).checked = true; //Reactivité Ki CACSI et non Estimation
         GID("CACSI").style = "display:block;";
     }
     GID("Fpwm" + F.Fpwm).checked = true;

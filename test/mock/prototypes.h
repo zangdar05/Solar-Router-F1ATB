@@ -1,3 +1,4 @@
+#include "Linky.h"
 // Prototypes des fonctions définies dans les .ino (générés par l'IDE Arduino en temps normal).
 // Inclus avant les .ino pour que les appels en avance sur la définition compilent.
 #pragma once
@@ -10,17 +11,14 @@
 
 bool Liste_WIFI();
 bool testMQTTconnected();
-byte ByteJson(String nom, String Json);
 const char *get_reset_reason_text(RESET_REASON reason);
 const char* ReadStatusToString(int status);
 float PfloatMax(float Pin);
 float ValJson(String nom, String Json);
 float ValJsonSG(String nom, String Json);
-int IntJson(String nom, String Json);
 int PintMax(int Pin);
 long LongJson(String nom, String Json);
 long myLongJson(String nom, String Json);
-short ShortJson(String nom, String Json);
 String Filtre_Nom(String Nom);
 String IP2String(unsigned long IP);
 String LesTemperatures();
@@ -35,8 +33,6 @@ uint32_t ipToInt(IPAddress ip);
 uint32_t LectureEnphase();
 unsigned long ConvCouleur(String V);
 unsigned long String2IP(String S);
-unsigned long ULongJson(String nom, String Json);
-unsigned short UShortJson(String nom, String Json);
 void CacheEtClose(int16_t seconde);
 void Calibration();
 void Call_RTE_data();
@@ -178,3 +174,12 @@ void time_sync_notification(struct timeval *tv);
 void UpdatePmqtt();
 void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info);
 void wpsStop();
+
+// Linky auxiliaire (S1)
+void Setup_LinkyAux();
+void LectureLinkyAux();
+void EstimePuissanceTIC(long &energie, long nouvelle, unsigned long &tLast, float &moy, float &deltaW);
+void DecodeTIC(HardwareSerial &port, TicData &tic, bool principal);
+void DecodeGroupeTIC(TicData &tic, const String &code, const String &val, bool checksumOk, bool principal);
+TicData &TicPourMQTT();
+bool LinkyDisponible();

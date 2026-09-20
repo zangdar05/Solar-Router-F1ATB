@@ -135,6 +135,8 @@ function SetParaFixe() {
     GID("ComSurv").value = F.ComSurv;
     GID("Serie").value = F.pSerial;
     GID("Serial2V").value =F.Serial2V;
+    GID("LinkyAux").value = F.LinkyAux ?? 0;
+    GID("pSerialAux").value = F.pSerialAux ?? 0;
     GID("pTriac").value = F.pTriac;
     GID("ESP").value = F.ESP32_Type;
     GID("pLED").value = F.LEDgroupe;
@@ -186,6 +188,8 @@ function SendValues() {
   F.WifiSleep = GID("WifiSleep").checked ? 1 : 0;
   F.hostname =GID("hostname").value;
   F.pSerial = GID("Serie").value;
+  F.LinkyAux = GID("LinkyAux").value;
+  F.pSerialAux = GID("pSerialAux").value;
   F.pTriac = GID("pTriac").value;
   F.ModePara = document.querySelector('input[name="ModeP"]:checked').value;
   F.ModeReseau = GID("ModeW").value;
@@ -251,7 +255,7 @@ function SendValues() {
   }
   
   document.cookie = "CleAcces=" + encodeURIComponent(F.CleAccesRef) + ";max-age=31536000;path=/"; // Ajout de la durée et du chemin
-  if ((GID("dhcp").checked || checkIP("adrIP") && checkIP("gateway")) && (!GID("MQTTRepet").checked || checkIP("MQTTIP"))) {
+  if ((GID("dhcp").checked || checkIP("adrIP") && checkIP("gateway")) && (GID("MQTTRepet").value == 0 || checkIP("MQTTIP"))) {
     fetch("/ParaNew", {
       method: "POST",                     // méthode HTTP
       headers: {
@@ -312,6 +316,9 @@ function checkDisabled() {
 
     if (GID("sources").value =="Linky") GID("Serial2V").value=9600; //vitesse Linky en mode standard 
     GID("Vport_serie").style.display = (GID("Serie").value>0) ? "table-row": "none";
+    const auxVisible = F.ModePara > 0 && GID("sources").value != "Linky";
+    GID("LinkyAuxL").style.display = auxVisible ? "table-row" : "none";
+    GID("LinkyAuxPin").style.display = (auxVisible && GID("LinkyAux").value == 1) ? "table-row" : "none";
 
     // Mise à jour de l'affichage des boutons/lignes
     GID("Bwifi").style.display = (F.ESP32_Type != 10) ? "inline-block" : "none";

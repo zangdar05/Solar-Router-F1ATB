@@ -361,8 +361,8 @@ uint32_t LectureEnphase() {
           PactReseau = ValJson("activePower", receivedDataBuf);
           PactConso_M = PactReseau + PactProd;  // dans l'hypothese qu'il n'y a pas de l'énergie fournit par une batterie !
           PvaReseau = ValJson("apparentPower", receivedDataBuf);
-          whDlvdCum = ValJson("actEnergyDlvd", receivedDataBuf);
-          whRcvdCum = ValJson("actEnergyRcvd", receivedDataBuf);
+          whDlvdCum = LongJson("actEnergyDlvd", receivedDataBuf);  // long : pas de perte de précision
+          whRcvdCum = LongJson("actEnergyRcvd", receivedDataBuf);
           Frequence = ValJson("freq", receivedDataBuf);
         }
       }
@@ -393,8 +393,8 @@ uint32_t LectureEnphase() {
             PactReseau = ValJson("activePower", receivedDataBuf);
             PactConso_M = PactReseau + PactProd;  // dans l'hypothese qu'il n'y a pas de l'énergie fournit par une batterie !
             PvaReseau = ValJson("apparentPower", receivedDataBuf);
-            whDlvdCum = ValJson("actEnergyDlvd", receivedDataBuf);
-            whRcvdCum = ValJson("actEnergyRcvd", receivedDataBuf);
+            whDlvdCum = LongJson("actEnergyDlvd", receivedDataBuf);  // long : pas de perte de précision
+            whRcvdCum = LongJson("actEnergyRcvd", receivedDataBuf);
             Frequence = ValJson("freq", receivedDataBuf);
 
             Tension_M = Tension_M1;
@@ -559,110 +559,6 @@ long myLongJson(String nom, String Json) {  // Alternative a LongJson au dessus 
   else
     p = q;
   long val = 0;
-  if (p > 0) {
-    Json = Json.substring(0, p);
-    val = Json.toInt();
-  }
-  return val;
-}
-unsigned long ULongJson(String nom, String Json) {  // Alternative a LongJson au dessus pour extraire chez RTE nb jour Tempo  https://particulier.RTE.fr/services/rest/referentiel/getNbTempoDays?TypeAlerte=TEMPO
-  int p = Json.indexOf(nom + "\":");
-  if (p < 0) return 0;  // MC002
-  Json = Json.substring(p);
-  p = Json.indexOf(":");
-  Json = Json.substring(p + 1);
-  int q = Json.indexOf(",");       //<==== Recherche d'une virgule et non d'un point
-  if (q == -1) q = Json.length();  //  /<==== Ajout de ces 2 lignes pour que la ligne p = min(p, q); ci dessous donne le bon résultat
-  p = Json.indexOf("}");
-  if (p > 0)
-    p = min(p, q);
-  else
-    p = q;
-  unsigned long val = 0;
-  if (p > 0) {
-    Json = Json.substring(0, p);
-    Json = "0000" + Json;
-    int L = Json.length();
-    unsigned long y = (Json.substring(0, L - 5)).toInt();  //Problème des valeurs signées dans un unsigned
-    unsigned long z = (Json.substring(L - 5)).toInt();
-    val = (y * 100000) + z;
-  }
-  return val;
-}
-int IntJson(String nom, String Json) {  // Pour éviter des problèmes d'overflow
-  int p = Json.indexOf(nom + "\":");
-  if (p < 0) return 0;  // MC002
-  Json = Json.substring(p);
-  p = Json.indexOf(":");
-  Json = Json.substring(p + 1);
-  int q = Json.indexOf(",");
-  if (q == -1) q = Json.length();
-  p = Json.indexOf("}");
-  if (p > 0)
-    p = min(p, q);
-  else
-    p = q;
-  int val = 0;
-  if (p > 0) {
-    Json = Json.substring(0, p);
-    val = Json.toInt();
-  }
-  return val;
-}
-byte ByteJson(String nom, String Json) {  // Pour éviter des problèmes d'overflow
-  int p = Json.indexOf(nom + "\":");
-  if (p < 0) return 0;  // MC002
-  Json = Json.substring(p);
-  p = Json.indexOf(":");
-  Json = Json.substring(p + 1);
-  int q = Json.indexOf(",");
-  if (q == -1) q = Json.length();
-  p = Json.indexOf("}");
-  if (p > 0)
-    p = min(p, q);
-  else
-    p = q;
-  byte val = 0;
-  if (p > 0) {
-    Json = Json.substring(0, p);
-    val = Json.toInt();
-  }
-  return val;
-}
-unsigned short UShortJson(String nom, String Json) {  // Pour éviter des problèmes d'overflow
-  int p = Json.indexOf(nom + "\":");
-  if (p < 0) return 0;  // MC002
-  Json = Json.substring(p);
-  p = Json.indexOf(":");
-  Json = Json.substring(p + 1);
-  int q = Json.indexOf(",");
-  if (q == -1) q = Json.length();
-  p = Json.indexOf("}");
-  if (p > 0)
-    p = min(p, q);
-  else
-    p = q;
-  unsigned short val = 0;
-  if (p > 0) {
-    Json = Json.substring(0, p);
-    val = Json.toInt();
-  }
-  return val;
-}
-short ShortJson(String nom, String Json) {  // Pour éviter des problèmes d'overflow
-  int p = Json.indexOf(nom + "\":");
-  if (p < 0) return 0;  // MC002
-  Json = Json.substring(p);
-  p = Json.indexOf(":");
-  Json = Json.substring(p + 1);
-  int q = Json.indexOf(",");
-  if (q == -1) q = Json.length();
-  p = Json.indexOf("}");
-  if (p > 0)
-    p = min(p, q);
-  else
-    p = q;
-  short val = 0;
   if (p > 0) {
     Json = Json.substring(0, p);
     val = Json.toInt();

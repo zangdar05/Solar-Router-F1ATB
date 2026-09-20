@@ -42,7 +42,7 @@ void CallESP32_Externe() {
     RMSExtDataB += clientESP_RMS.readStringUntil('\r');
   }
   clientESP_RMS.stop();
-  if (RMSExtDataB.length() > 400) {
+  if (RMSExtDataB.length() > 800) {  // en-têtes HTTP + trame bi-sonde/triphasé ~ 500
     RMSExtDataB = "";
   }
 

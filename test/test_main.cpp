@@ -208,19 +208,11 @@ static void reset_linky() {
   reset_commun();
   Source = "Linky";
   pSerial = 1;
-  LFon = false;
-  EASTvalid = false;
-  EAITvalid = false;
+  ticPrincipal = TicData();  // état du décodeur TIC (index, moyennes, tampon)
   IdxDataRawLinky = 0;
-  IdxBufDecodLinky = 0;
   Energie_M_Soutiree = 0;
   Energie_M_Injectee = 0;
-  moyPWS = 0; moyPWI = 0; moyPVAS = 0; moyPVAI = 0;
-  COSphiS = 1; COSphiI = 1;
-  TlastEASTvalide = 0; TlastEAITvalide = 0;
   LTARF = ""; NGTF = ""; STGE = ""; STGEt = "";
-  EASF01 = EASF02 = EASF03 = EASF04 = EASF05 = 0;
-  EASF06 = EASF07 = EASF08 = EASF09 = EASF10 = 0;
   Tension_M = 0; Intensite_M = 0;
 }
 
@@ -251,10 +243,10 @@ static void test_linky_trame_valide() {
   CHECK_STR(NGTF, "BASE");
   CHECK_NEAR(Tension_M, 235.0, 0.01);
   CHECK_NEAR(Intensite_M, 12.0, 0.01);
-  CHECK_EQ(EASF01, 1111111L);
-  CHECK_EQ(EASF02, 2222222L);
-  CHECK_EQ(EASF05, 5555555L);
-  CHECK_EQ(EASF10, 1010101L);
+  CHECK_EQ(ticPrincipal.EASF[0], 1111111L);
+  CHECK_EQ(ticPrincipal.EASF[1], 2222222L);
+  CHECK_EQ(ticPrincipal.EASF[4], 5555555L);
+  CHECK_EQ(ticPrincipal.EASF[9], 1010101L);
   CHECK_EQ((int)IdxDataRawLinky, (int)((t1.size() + t2.size()) % 4000));
 
   // PuissanceS_M = COSphiS * PVAS_M ; COSphiS part de moyPWS/moyPVAS qui monte
@@ -265,6 +257,91 @@ static void test_linky_trame_valide() {
   // (nibble Tempo jour/lendemain) utilisé par l'accueil, l'écran et les esclaves.
   CHECK_STR(STGE, "1A3B0001");
   CHECK_STR(STGEt, "A");
+}
+
+// S1 : Linky auxiliaire (lecture seule sur SerialAux) avec une autre source de mesure.
+// Les variables de régulation ne doivent pas bouger ; tarif/Tempo/index remontent en MQTT.
+static void test_linky_aux() {
+  reset_commun();
+  Source = "UxIx2";
+  Source_data = "UxIx2";
+  LinkyAux = 1;
+  pSerialAux = 2;  // RX gpio 26
+  SerialAux.mock_clear();
+  ticAux = TicData();
+  IdxDataRawLinky = 0;
+  LTARF = ""; NGTF = ""; STGE = ""; STGEt = "";
+  Energie_M_Soutiree = 42; Energie_M_Injectee = 7;
+  PuissanceS_M = 123; PuissanceI_M = 0; PVAS_M = 130;
+  Tension_M = 0; Intensite_M = 0;
+  EnergieActiveValide = false; PuissanceRecue = false;
+
+  Setup_LinkyAux();
+  CHECK(SerialAux.started);
+  CHECK_EQ(SerialAux.pinRx, 26);
+  CHECK_EQ(SerialAux.pinTx, -1);
+
+  SerialAux.mock_feed(trame_linky(1000000, 200000, 1200, 0));
+  mock_set_millis(2000);
+  LectureLinkyAux();
+  SerialAux.mock_feed(trame_linky(1000010, 200005, 1300, 400));
+  mock_set_millis(4000);
+  LectureLinkyAux();
+
+  // Données du compteur dans ticAux
+  CHECK_EQ(ticAux.EAST, 1000010L);
+  CHECK_EQ(ticAux.EAIT, 200005L);
+  CHECK_EQ(ticAux.SINSTS, 1300);
+  CHECK_EQ(ticAux.SINSTI, 400);
+  CHECK_EQ(ticAux.URMS1, 235);
+  CHECK_EQ(ticAux.EASF[0], 1111111L);
+  CHECK_EQ(ticAux.EASF[9], 1010101L);
+  CHECK_EQ((int)ticAux.nbTrames, 2);
+  CHECK(ticAux.PuissanceS >= 0 && ticAux.PuissanceS <= 1300);
+  // Tarif / Tempo pris sur l'auxiliaire car la source n'est pas un Linky
+  CHECK_STR(LTARF, "HC BLEU");
+  CHECK_STR(NGTF, "BASE");
+  CHECK_STR(STGE, "1A3B0001");
+  CHECK_STR(STGEt, "A");
+  // La régulation (source UxIx2) n'est pas touchée
+  CHECK_EQ(Energie_M_Soutiree, 42L);
+  CHECK_EQ(Energie_M_Injectee, 7L);
+  CHECK_EQ(PuissanceS_M, 123);
+  CHECK_EQ(PVAS_M, 130);
+  CHECK_EQ((int)Tension_M, 0);
+  CHECK(!EnergieActiveValide);
+  CHECK(!PuissanceRecue);  // le watchdog reste lié à la source principale
+  CHECK_EQ((int)IdxDataRawLinky, 0);  // tampon de la page Données brutes non utilisé
+
+  // MQTT : discovery et état publient les données Linky_* depuis ticAux
+  MQTTRepet = 10;
+  EnergieActiveValide = true;
+  mock_mqtt_connected = true;
+  mock_mqtt_published.clear();
+  sendMQTTDiscoveryMsg_global();
+  int nbLinky = 0;
+  for (auto &m : mock_mqtt_published)
+    if (m.topic.find("_Linky_") != std::string::npos) nbLinky++;
+  CHECK_EQ(nbLinky, 8);
+  mock_mqtt_published.clear();
+  SendDataToHomeAssistant();
+  CHECK_EQ((int)mock_mqtt_published.size(), 1);
+  JsonDocument doc;
+  CHECK(deserializeJson(doc, mock_mqtt_published.back().payload.c_str()) == DeserializationError::Ok);
+  CHECK_EQ((long)doc["Linky_EAST"], 1000010L);
+  CHECK_EQ((long)doc["EASF10"], 1010101L);
+  CHECK_EQ((int)doc["Linky_SINSTI"], 400);
+  CHECK_EQ((int)doc["Code_Tarifaire"], 11);
+  CHECK_EQ((long)doc["Energie_M_Soutiree"], 42L);
+
+  // Source Linky principale : pas de doublon Linky_* (l'aux est ignoré au setup)
+  Source = "Linky";
+  mock_mqtt_published.clear();
+  SendDataToHomeAssistant();
+  CHECK(deserializeJson(doc, mock_mqtt_published.back().payload.c_str()) == DeserializationError::Ok);
+  CHECK(doc["Linky_EAST"].isNull());
+  LinkyAux = 0;
+  Source = "NotDef";
 }
 
 static void test_linky_checksum_faux() {
@@ -725,8 +802,8 @@ static void config_mqtt() {
   Energie_M_Injectee = 200000;
   EnergieJour_M_Soutiree = 5000;
   EnergieJour_M_Injectee = 600;
-  EASF01 = 1111111; EASF02 = 2222222; EASF03 = 3; EASF04 = 4; EASF05 = 5;
-  EASF06 = 6; EASF07 = 7; EASF08 = 8; EASF09 = 9; EASF10 = 10;
+  ticPrincipal.EASF[0] = 1111111; ticPrincipal.EASF[1] = 2222222;
+  for (int i = 2; i < 10; i++) ticPrincipal.EASF[i] = i + 1;
 
   LesActions[0].Titre = "Chauffe_eau";
   LesActions[0].Actif = MODE_DECOUPE_ONOFF;
@@ -825,8 +902,7 @@ static void test_mqtt_etat_long() {
   }
   for (int c = 0; c < 4; c++) { Source_Temp[c] = "tempInt"; temperature[c] = 21.5; }
   LTARF = "HC BLEU"; NGTF = "TEMPO"; STGE = "1A3B0001";
-  EASF01 = 12345678; EASF02 = 12345678; EASF03 = 12345678; EASF04 = 12345678; EASF05 = 12345678;
-  EASF06 = 12345678; EASF07 = 12345678; EASF08 = 12345678; EASF09 = 12345678; EASF10 = 12345678;
+  for (int i = 0; i < 10; i++) ticPrincipal.EASF[i] = 12345678;
   Energie_M_Soutiree = 123456789; Energie_M_Injectee = 123456789;
   mock_mqtt_published.clear();
   mock_mqtt_connected = true;
@@ -1124,6 +1200,7 @@ int main() {
 
   RUN(test_linky_trame_valide);
   RUN(test_linky_checksum_faux);
+  RUN(test_linky_aux);
   RUN(test_multisinus_tables);
   RUN(test_overproduction_triac);
   RUN(test_overproduction_relais);

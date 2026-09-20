@@ -347,6 +347,8 @@ void DeserializeConfiguration(String json) {
   ComSurv = conf["ComSurv"];
   pSerial = conf["pSerial"];
   Serial2V = conf["Serial2V"].isNull() ? Serial2V : conf["Serial2V"];
+  LinkyAux = conf["LinkyAux"] | LinkyAux;
+  pSerialAux = conf["pSerialAux"] | pSerialAux;
   pTriac = conf["pTriac"];
   // Zone des actions
   ReacCACSI = conf["ReacCACSI"];
@@ -482,6 +484,8 @@ String SerializeConfiguration() {
   conf["ComSurv"] = ComSurv;
   conf["pSerial"] = pSerial;
   conf["Serial2V"] = Serial2V;
+  conf["LinkyAux"] = LinkyAux;
+  conf["pSerialAux"] = pSerialAux;
   conf["pTriac"] = pTriac;
   // Enregistrement des Actions
   if (ReacCACSI < 1)

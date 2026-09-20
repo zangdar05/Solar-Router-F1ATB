@@ -80,6 +80,9 @@ void Ecran_Loop() {
         case 1:
           GrapheTrace(10);
           break;
+        case 2:
+          GrapheTrace(48);
+          break;
         case 3:
           runtime_On = millis();  //Cas des messages de debug, on laisse allumé
           TraceMessages();

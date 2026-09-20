@@ -67,7 +67,7 @@ bool testMQTTconnected() {
         clientMQTT.subscribe(Topicp);
       }
       if (subMQTT == 1) {
-        char TopicAct[60];
+        char TopicAct[100];
         for (int i = 0; i < NbActions; i++) {
           if (LesActions[i].Titre.length() > 0) {
             snprintf(TopicAct, sizeof(TopicAct), "%s/%s", MQTTdeviceName.c_str(), LesActions[i].Titre.c_str());
@@ -138,7 +138,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
       LastPwMQTTMillis = millis();
   }
   if (subMQTT == 1) {
-    char TopicAct[60];
+    char TopicAct[100];
     bool recordDemande = false;
     for (int i = 0; i < NbActions; i++) {
       if (LesActions[i].Titre.length() > 0) {
@@ -212,7 +212,7 @@ void sendMQTTDiscoveryMsg_global() {
       DeviceToDiscover("Temperature_" + String(canal), nomTemperature[canal], "°C", "temperature", "1");
   }
 
-  if (Source == "Linky" || TempoRTEon == 1) {
+  if (LinkyDisponible() || TempoRTEon == 1) {
     DeviceTextToDiscover("LTARF", "Option Tarifaire");
     DeviceToDiscoverWithoutUnit("Code_Tarifaire", "Code Tarifaire", "0");
   }
@@ -221,19 +221,24 @@ void sendMQTTDiscoveryMsg_global() {
     DeviceTextToDiscover("RTE_Demain", "RTE Lendemain");
   }
 
-  if (Source == "Linky") {
+  if (LinkyDisponible()) {
     DeviceTextToDiscover("NGTF", "Calendrier Tarifaire");
     DeviceTextToDiscover("STGE", "Statuts");
-    DeviceToDiscover("EASF01", "EASF01", "Wh", "energy", "0");
-    DeviceToDiscover("EASF02", "EASF02", "Wh", "energy", "0");
-    DeviceToDiscover("EASF03", "EASF03", "Wh", "energy", "0");
-    DeviceToDiscover("EASF04", "EASF04", "Wh", "energy", "0");
-    DeviceToDiscover("EASF05", "EASF05", "Wh", "energy", "0");
-    DeviceToDiscover("EASF06", "EASF06", "Wh", "energy", "0");
-    DeviceToDiscover("EASF07", "EASF07", "Wh", "energy", "0");
-    DeviceToDiscover("EASF08", "EASF08", "Wh", "energy", "0");
-    DeviceToDiscover("EASF09", "EASF09", "Wh", "energy", "0");
-    DeviceToDiscover("EASF10", "EASF10", "Wh", "energy", "0");
+    for (int i = 1; i <= 10; i++) {
+      char nom[7];
+      snprintf(nom, sizeof(nom), "EASF%02d", i);
+      DeviceToDiscover(nom, nom, "Wh", "energy", "0");
+    }
+  }
+  if (LinkyAux == 1 && Source != "Linky") {  //Linky auxiliaire : mesures propres au compteur
+    DeviceToDiscover("Linky_EAST", "Linky Energie Soutirée", "Wh", "energy", "0");
+    DeviceToDiscover("Linky_EAIT", "Linky Energie Injectée", "Wh", "energy", "0");
+    DeviceToDiscover("Linky_SINSTS", "Linky VA Soutirés", "VA", "apparent_power", "0");
+    DeviceToDiscover("Linky_SINSTI", "Linky VA Injectés", "VA", "apparent_power", "0");
+    DeviceToDiscover("Linky_PuissanceS", "Linky Puissance Soutirée", "W", "power", "0");
+    DeviceToDiscover("Linky_PuissanceI", "Linky Puissance Injectée", "W", "power", "0");
+    DeviceToDiscover("Linky_URMS1", "Linky Tension", "V", "voltage", "0");
+    DeviceToDiscover("Linky_IRMS1", "Linky Intensité", "A", "current", "0");
   }
   if (Source == "Enphase") {
     DeviceToDiscover("PactProd", "Puissance produite", "W", "power", "0");
@@ -383,7 +388,7 @@ void SendDataToHomeAssistant() {
     }
   }
 
-  if (Source == "Linky" || TempoRTEon == 1) {
+  if (LinkyDisponible() || TempoRTEon == 1) {
     int code = 0;
     if (LTARF.indexOf("HEURE  CREUSE") >= 0)
       code = 1;  // Code Linky
@@ -413,10 +418,17 @@ void SendDataToHomeAssistant() {
   if (TempoRTEon == 1) {
     len += snprintf(value + len, RESTE(len, value), ",\"RTE_Jour\":\"%s\", \"RTE_Demain\":\"%s\"", RTE_Jour.c_str(), RTE_Demain.c_str());
   }
-  if (Source == "Linky") {
+  if (LinkyDisponible()) {
+    TicData &tic = TicPourMQTT();
     len += snprintf(value + len, RESTE(len, value), ",\"NGTF\":\"%s\"", NGTF.c_str());
     len += snprintf(value + len, RESTE(len, value), ",\"STGE\":\"%s\"", STGE.c_str());
-    len += snprintf(value + len, RESTE(len, value), ",\"EASF01\":%ld, \"EASF02\":%ld, \"EASF03\":%ld, \"EASF04\":%ld, \"EASF05\":%ld, \"EASF06\":%ld,\"EASF07\":%ld, \"EASF08\":%ld, \"EASF09\":%ld, \"EASF10\":%ld", EASF01, EASF02, EASF03, EASF04, EASF05, EASF06, EASF07, EASF08, EASF09, EASF10);
+    for (int i = 0; i < 10; i++) {
+      len += snprintf(value + len, RESTE(len, value), ",\"EASF%02d\":%ld", i + 1, tic.EASF[i]);
+    }
+    if (LinkyAux == 1 && Source != "Linky") {
+      len += snprintf(value + len, RESTE(len, value), ",\"Linky_EAST\":%ld,\"Linky_EAIT\":%ld,\"Linky_SINSTS\":%d,\"Linky_SINSTI\":%d,\"Linky_PuissanceS\":%d,\"Linky_PuissanceI\":%d,\"Linky_URMS1\":%d,\"Linky_IRMS1\":%d",
+                      tic.EAST, tic.EAIT, tic.SINSTS, tic.SINSTI, tic.PuissanceS, tic.PuissanceI, tic.URMS1, tic.IRMS1);
+    }
   }
   if (Source == "Enphase") {
     len += snprintf(value + len, RESTE(len, value), ",\"PactProd\":%d, \"PactConso_M\":%d", PactProd, PactConso_M);

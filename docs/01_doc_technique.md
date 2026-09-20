@@ -198,7 +198,6 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 | B12 | `EnvoiMQTT.ino:callback` | `TopicAct[60]` : `MQTTdeviceName + "/" + Titre` tronqué silencieusement si > 59 caractères → ordre jamais reconnu | Faible |
 | B13 | `Source_Linky.ino` | `code.indexOf("SINSTI") == 0` accepte aussi `SINSTI1..3` hypothétiques ; `EAST`/`EAIT` acceptent tout préfixe (`EASTvalide` n'existe pas dans la TIC, sans effet) | Info |
 | B14 | `Solar_Router_V17_29.ino:WiFiEvent` | `EcritureEnROM()` (écriture LittleFS + JSON) appelé depuis la tâche événement WiFi, concurrent de `loop()` | Faible |
-
 | B15 | `JS_Para.h:254` | `!GID("MQTTRepet").checked` sur un `<input type=number>` : la validation de l'IP MQTT n'est jamais exécutée | Faible |
 | B16 | `JS_Actions.h:98`, `:286` | Apostrophe non échappée dans un attribut `title`, quote parasite dans un `div` | Faible (HTML) |
 | B17 | `JS_Actions.h:1239` | `GID("CACSI"+ReacCACSI)` : `TypeError` si `ReacCACSI` ∉ {1,2,4,8,100} | Faible |
@@ -208,7 +207,6 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 | B21 | `Source_EnphaseEnvoy.ino:364,396` | Compteurs `long` alimentés par `ValJson()` (float 24 bits) : perte de précision > 16,7 MWh | Faible |
 | B22 | `JS_Actions.h:391-465` | `touchMove/mouseMove/NewPosition` : code mort (≈ 2,6 Ko) | Flash |
 | B23 | `PagePara.h:27` | Sélecteur CSS `#ligneTopicT` mort (ids réels `ligneTopicT0..3`) | Info |
-
 | B24 | `Solar_Router_V17_29.ino` (setup) | Les tables multi-sinus littérales étaient écrasées au boot par un recalcul donnant 79 valeurs différentes sur 101 | Info (corrigé : tables figées aux valeurs calculées) |
 | B25 | `Stockage.ino:Record_Data` | `Record_Conf` non renseigné à la création du CSV mensuel : en-tête réécrit au 2ᵉ enregistrement | Faible (corrigé) |
 | B26 | `Actions.cpp:ParaEnCours` | `P.Vmin`/`P.Vmax` non initialisés hors période (non lus tant que `Type <= 1`) | Latent (corrigé) |
