@@ -7,6 +7,7 @@ String ConfImport;
 void Init_Server() {
   // Init Web Server on port 80
   server.on("/", handleRoot);
+  server.on("/biSonde", handleBiSonde);
   server.on("/MainJS1", handleMainJS1);
   server.on("/MainJS2", handleMainJS2);
   server.on("/MainJS3", handleMainJS3);
@@ -64,7 +65,7 @@ void Init_Server() {
   // SERVER OTA
 
   server.on("/OTA", HTTP_GET, []() {
-    lectureCookie(OtaHtml);
+    lectureCookie(OtaHtml_gz, OtaHtml_gz_len);
   });
 
   /*handling uploading firmware file */
@@ -156,40 +157,47 @@ void Init_Server() {
   server.begin();
 }
 
+// Envoi d'une page/script pré-compressé (WebGz.h) : le navigateur décompresse (gzip)
+void sendGz(const char *type, const uint8_t *data, uint32_t len) {
+  server.sendHeader("Content-Encoding", "gzip");
+  server.send_P(200, type, (PGM_P)data, len);
+}
 void handleRoot() {  // Pages principales
-
-  server.send_P(200, "text/html", MainHtml);
+  sendGz("text/html", MainHtml_gz, MainHtml_gz_len);
 }
 void handleWifi() {
-  lectureCookie(ConnectAP_Html);
+  lectureCookie(ConnectAP_Html_gz, ConnectAP_Html_gz_len);
 }
-void handleMainJS1() {                  // Code Javascript
+void handleBiSonde() {                  // Variable JS dynamique, chargée avant MainJS1
   String S = "var biSonde=false;\r\n";  // Pour tracer immediatement tableau Mesures
   if (nomSondeFixe != "" && (Source_data == "UxIx2" || ((Source_data == "ShellyEm" || Source_data == "ShellyPro") && EnphaseSerial.toInt() != 3))) {
     S = "var biSonde=true;\r\n";
   }
-
-  server.send(200, "text/javascript", S + MainJS1);  // Javascript code
+  server.send(200, "text/javascript", S);
+}
+void handleMainJS1() {  // Code Javascript
+  CacheEtClose(300);
+  sendGz("text/javascript", MainJS1_gz, MainJS1_gz_len);
 }
 void handleMainJS2() {  // Code Javascript
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", MainJS2);  // Javascript code
+  sendGz("text/javascript", MainJS2_gz, MainJS2_gz_len);
 }
 void handleMainJS3() {  // Code Javascript
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", MainJS3);  // Javascript code
+  sendGz("text/javascript", MainJS3_gz, MainJS3_gz_len);
 }
 void handleBrute() {  // Page données brutes
   CacheEtClose(300);
-  server.send_P(200, "text/html", PageBrute);
+  sendGz("text/html", PageBrute_gz, PageBrute_gz_len);
 }
 void handleBruteJS1() {  // Code Javascript
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", PageBruteJS1);  // Javascript code
+  sendGz("text/javascript", PageBruteJS1_gz, PageBruteJS1_gz_len);
 }
 void handleBruteJS2() {  // Code Javascript
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", PageBruteJS2);  // Javascript code
+  sendGz("text/javascript", PageBruteJS2_gz, PageBruteJS2_gz_len);
 }
 void handleAjaxRMS() {  // Envoi des dernières données  brutes reçues du RMS
   String S = "";
@@ -560,23 +568,23 @@ void handleAjaxNoms() {
 }
 
 void handleActions() {
-  lectureCookie(ActionsHtml);
+  lectureCookie(ActionsHtml_gz, ActionsHtml_gz_len);
 }
 void handleActionsJS1() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ActionsJS1);
+  sendGz("text/javascript", ActionsJS1_gz, ActionsJS1_gz_len);
 }
 void handleActionsJS2() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ActionsJS2);
+  sendGz("text/javascript", ActionsJS2_gz, ActionsJS2_gz_len);
 }
 void handleActionsJS3() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ActionsJS3);
+  sendGz("text/javascript", ActionsJS3_gz, ActionsJS3_gz_len);
 }
 void handleActionsJS4() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ActionsJS4);
+  sendGz("text/javascript", ActionsJS4_gz, ActionsJS4_gz_len);
 }
 
 
@@ -601,7 +609,7 @@ void handlePinsActionsJS() {  // Pins disponibles
 
 
 void handlePara() {
-  lectureCookie(ParaHtml);
+  lectureCookie(ParaHtml_gz, ParaHtml_gz_len);
   Serial.print("Clé accès reçue :" + CleAcces);
   Serial.println("  Attendue :" + CleAccesRef);
   previousTempMillis = millis() - 120000;
@@ -647,21 +655,21 @@ void handleParaNew() {
 }
 
 void handleCleUpdate() {
-  lectureCookie("");
+  lectureCookie(nullptr, 0);
 
   server.send(200, "text/plain", "OKcle");
 }
 void handleParaJS1() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ParaJS1);
+  sendGz("text/javascript", ParaJS1_gz, ParaJS1_gz_len);
 }
 void handleParaJS2() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ParaJS2);
+  sendGz("text/javascript", ParaJS2_gz, ParaJS2_gz_len);
 }
 void handleParaCommunJS() {
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", ParaCommunJS);
+  sendGz("text/javascript", ParaCommunJS_gz, ParaCommunJS_gz_len);
 }
 void handleParaFixe() {  //Paramètres stockés en fichier
   File file = LittleFS.open("/parametres.json", "r");
@@ -731,7 +739,7 @@ void handleSetGpio() {
   server.send(200, "text/html", S);
 }
 void handleExport() {
-  lectureCookie(ExportHtml);
+  lectureCookie(ExportHtml_gz, ExportHtml_gz_len);
 }
 void handleExport_file() {
   String S = "";
@@ -859,7 +867,7 @@ void handleAP_SetWifi() {
 }
 
 void handleHeure() {
-  lectureCookie(HeureHtml);
+  lectureCookie(HeureHtml_gz, HeureHtml_gz_len);
 }
 void handleHourUpdate() {
   String New_H = server.arg("New_H");
@@ -875,11 +883,11 @@ void handleHourUpdate() {
 }
 
 void handleCouleurs() {
-  lectureCookie(CouleursHtml);
+  lectureCookie(CouleursHtml_gz, CouleursHtml_gz_len);
 }
 void handleCommunCouleurJS() {  // Code Javascript
   CacheEtClose(300);
-  server.send_P(200, "text/javascript", CommunCouleurJS);  // Javascript code
+  sendGz("text/javascript", CommunCouleurJS_gz, CommunCouleurJS_gz_len);
 }
 void handleCouleursAjax() {
 
@@ -913,13 +921,13 @@ void handleCommunCSS() {
 }
 
 void handleFavicon() {
-  server.send_P(200, "image/svg+xml", Favicon);
+  sendGz("image/svg+xml", Favicon_gz, Favicon_gz_len);
 }
 void handleFavicon192() {
-  server.send_P(200, "image/svg+xml", Favicon192);
+  sendGz("image/svg+xml", Favicon192_gz, Favicon192_gz_len);
 }
 void handleManifest() {
-  server.send_P(200, "application/json", Manifest);
+  sendGz("application/json", Manifest_gz, Manifest_gz_len);
 }
 void handleNotFound() {  // Page Web pas trouvé
   String message = "Fichier non trouvé\n\n";
@@ -940,14 +948,13 @@ void handleNotFound() {  // Page Web pas trouvé
 void CacheEtClose(int16_t seconde) {
   server.sendHeader("Cache-Control", "max-age=" + String(seconde));
 }
-void lectureCookie(String S) {
+void lectureCookie(const uint8_t *gz, uint32_t len) {  // Page compressée, ou nullptr pour lire seulement le cookie
   ExtraitCookie();
-  if (S != "") {
-
+  if (gz != nullptr) {
     if (CleAccesRef == CleAcces) {
-      server.send(200, "text/html", S);
+      sendGz("text/html", gz, len);
     } else {
-      server.send(200, "text/html", ParaCleHtml);  // Demande clé d'acces / mot de passe
+      sendGz("text/html", ParaCleHtml_gz, ParaCleHtml_gz_len);  // Demande clé d'acces / mot de passe
     }
   }
 }

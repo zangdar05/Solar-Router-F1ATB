@@ -378,22 +378,11 @@
 #include <rom/rtc.h>
 
 
-// Pages WEB
-#include "PageAccueil.h"
-#include "JS_Accueil.h"
-#include "PageActions.h"
-#include "JS_Actions.h"
-#include "PagePara.h"
-#include "JS_Para.h"
-#include "PageBrute.h"
-#include "JS_Brute.h"
-#include "PageCommun.h"
-#include "JS_Commun.h"
-#include "PageHtmlJS_OTA.h"
-#include "PageHtmlJS_Heure.h"
-#include "PageHtmlJS_Couleurs.h"
-#include "PageHtmlJS_Export.h"
-#include "PageHtmlJS_Connect.h"
+// Pages WEB : sources lisibles dans Page*.h / JS_*.h, servies compressées (gzip)
+// depuis WebGz.h généré par tools/gen_web_gz.py (à relancer après toute modif des pages)
+#define WEB_GZ
+#include "PageCommun.h"  // CommunCSS et CouleurDefaut restent en clair
+#include "WebGz.h"
 
 //Watchdog de 180 secondes. Le systeme se Reset si pas de dialoque avec le LINKY ou JSY-MK-194T/333 ou Enphase-Envoy pendant 180s
 //Watchdog for 180 seconds. The system resets if no dialogue with the Linky or  JSY-MK-194T/333 or Enphase-Envoy for 180s

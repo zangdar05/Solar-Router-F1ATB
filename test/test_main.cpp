@@ -893,6 +893,39 @@ static void test_mqtt_source_pmqtt() {
 }
 
 // ===========================================================================
+// 6 bis. Pages web servies compressées (WebGz.h généré par tools/gen_web_gz.py)
+// ===========================================================================
+#include "WebGz.h"  // constantes à liaison interne : on inclut le fichier généré
+static void test_web_gzip() {
+  reset_commun();
+  mock_last_http_headers = "";
+  handleRoot();
+  CHECK(mock_last_http_headers.indexOf("Content-Encoding: gzip") >= 0);
+  CHECK_EQ((unsigned)mock_last_http_body.length(), (unsigned)MainHtml_gz_len);
+  CHECK((uint8_t)mock_last_http_body[0] == 0x1f && (uint8_t)mock_last_http_body[1] == 0x8b);  // magic gzip
+
+  // Page protégée : sans cookie valide -> page de saisie de la clé
+  CleAccesRef = "secret";
+  mock_http_headers.erase("Cookie");
+  handleActions();
+  CHECK_EQ((unsigned)mock_last_http_body.length(), (unsigned)ParaCleHtml_gz_len);
+  mock_http_headers["Cookie"] = "CleAcces=secret";
+  handleActions();
+  CHECK_EQ((unsigned)mock_last_http_body.length(), (unsigned)ActionsHtml_gz_len);
+  mock_http_headers.erase("Cookie");
+  CleAccesRef = "";
+
+  // Variable biSonde servie séparément (avant MainJS1)
+  nomSondeFixe = "Prod";
+  Source_data = "UxIx2";
+  handleBiSonde();
+  CHECK_STR(mock_last_http_body, "var biSonde=true;\r\n");
+  Source_data = "Linky";
+  handleBiSonde();
+  CHECK_STR(mock_last_http_body, "var biSonde=false;\r\n");
+}
+
+// ===========================================================================
 // 7. Fonctions utilitaires
 // ===========================================================================
 static void test_utilitaires() {
@@ -1105,6 +1138,7 @@ int main() {
   RUN(test_source_externe);
   RUN(test_energie_quotidienne);
   RUN(test_record_data);
+  RUN(test_web_gzip);
 
   printf("--------------------------------------------------------------\n");
   printf("%d verifications, %d echec(s)\n", g_checks, g_fail);

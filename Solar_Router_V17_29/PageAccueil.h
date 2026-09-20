@@ -312,6 +312,7 @@ const char *MainHtml = R"====(
 
   <!-- Scripts -->
   <script src="/ParaCommunJS"></script>
+  <script src="/biSonde"></script>
   <script src="MainJS1"></script>
   <script src="MainJS2"></script>
   <script src="MainJS3"></script>

@@ -50,6 +50,13 @@ def main():
     env = dict(os.environ)
     env["PATH"] = MINGW_BIN + os.pathsep + env.get("PATH", "")
 
+    # WebGz.h doit être à jour par rapport aux sources des pages web
+    print("Vérification WebGz.h...", flush=True)
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "gen_web_gz.py"), "--check"], cwd=ROOT, env=env)
+    if r.returncode != 0:
+        print("WebGz.h obsolète : lancer python tools/gen_web_gz.py", file=sys.stderr)
+        return r.returncode
+
     print("Compilation...", flush=True)
     r = subprocess.run(CMD, cwd=ROOT, env=env)
     if r.returncode != 0:

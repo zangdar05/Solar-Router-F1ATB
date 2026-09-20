@@ -1,3 +1,4 @@
+#ifndef WEB_GZ
 const char *ParaCleHtml = R"====(
 <!doctype html>
 <html>
@@ -128,6 +129,7 @@ const char *ParaCleHtml = R"====(
 </html>
 )====";
 
+#endif
 const char *CommunCSS = R"====(
 a:link {color:#aaf;text-decoration: none;}
 a:visited {color:#ccf;text-decoration: none;}

@@ -143,6 +143,7 @@ bool mock_client_connect_ok = false;
 std::string mock_client_response;
 std::string mock_client_request;
 
+String mock_last_http_headers;
 String mock_last_http_body;
 int mock_last_http_code = 0;
 String mock_last_http_type;

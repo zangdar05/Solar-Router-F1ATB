@@ -27,6 +27,7 @@ struct HTTPUpload {
 
 // Etat observable par les tests
 extern String mock_last_http_body;
+extern String mock_last_http_headers;  // en-têtes "Nom: valeur" (une par ligne) ajoutés par sendHeader()
 extern int mock_last_http_code;
 extern String mock_last_http_type;
 extern std::map<std::string, std::string> mock_http_args;
@@ -59,7 +60,7 @@ public:
   }
   void sendContent(const String &c) { mock_last_http_body += c; }
   void setContentLength(size_t) {}
-  void sendHeader(const String &, const String &, bool first = false) { (void)first; }
+  void sendHeader(const String &n, const String &v, bool first = false) { (void)first; mock_last_http_headers += n + ": " + v + "\n"; }
   void collectHeaders(const char **h, size_t n) { (void)h; (void)n; }
   template <typename... T>
   void collectHeaders(T... t) { (void)sizeof...(t); }
