@@ -13,9 +13,19 @@ Chaque étape = tests hôte verts (`python test/run_tests.py`) + build PlatformI
 | 4 | `500dd0d` | Pages web gzip (`WebGz.h`) | 1 733 583 | 91 648 | 645 |
 | 5 | `c59b506` | Code mort, tables multi-sinus figées | 1 732 479 | 91 440 | 645 |
 | 6 | `383e90f` | Docs : chiffrage flash par fonctionnalité | — | — | — |
-| 7 | `3eb0485` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
+| 7 | `4aa2cdb` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
+| 8 | `7f505fb` | Historique 1 an en flux direct, plafond des lignes de diagnostic CSV (tas à 276 o constaté sur un routeur réel) | 1 732 435 | 92 904 | 686 |
 
-Marge flash finale : **211 585 octets** (48 041 à l'origine).
+Marge flash finale : **213 165 octets** (48 041 à l'origine).
+
+Hashes GitHub (dépôt `zangdar05/Solar-Router-F1ATB`, branche `main`, historique rejoué sur V17.26) : V17.29 = `d22173d`, S1 = `4aa2cdb`, étape 8 = `7f505fb`.
+
+## 0. Déploiement OTA validé (20/09/2026)
+- Routeur de test : ESP32 Wroom, Source Linky, 2 actions, MQTT 20 s, mode expert. Avant mise à jour : RAM libre minimum **412 octets** (puis 276 après un appel `/ajax_histo1an`).
+- Cause : CSV mensuel de 62 Ko (1 133 lignes « Puissances non reçues => Reset » sur 4 jours, un reset toutes les 5 mn pendant une coupure Linky) chargé entièrement dans un `JsonDocument` par `/ajax_histo1an`, appelé par l'accueil toutes les 5 mn. Corrigé à l'étape 8 ; CSV du routeur nettoyé (4 lignes conservées) par la page Import.
+- OTA par `curl -F update=@firmware.bin http://<ip>/update` : 10 s, redémarrage en 5 s. Après : RAM libre 89 892, minimum 83 924 ; pages gzip servies (accueil 1 549 o) ; Linky, MQTT et actions inchangés.
+- Reste cosmétique : « Dernier reset : Code inconnu » après un reset logiciel (codes RTC du core 3.x non mappés dans `get_reset_reason_text`).
+
 
 ## 2. Étape 7 — Linky auxiliaire (solution S1 de `04_architecture_mqtt_linky.md`)
 
