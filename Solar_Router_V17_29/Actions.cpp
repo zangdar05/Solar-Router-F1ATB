@@ -121,6 +121,8 @@ int16_t Action::CanalTempEnCours(int Heure) {
 Action::ParaPeriode Action::ParaEnCours(int Heure, float Temperature, int Ltarfbin, int Retard) {  //Retourne type d'action  active à cette heure , test temperature OK et seuils
   ParaPeriode P;
   P.Type = 1;                                 //Off
+  P.Vmin = 0;
+  P.Vmax = 0;
   int16_t Tempx10 = int(Temperature * 10.0);  //Température en dixième de degré                                                                  //Equivalent à Action Off
   bool ConditionsOk;
   for (int i = 0; i < NbPeriode; i++) {

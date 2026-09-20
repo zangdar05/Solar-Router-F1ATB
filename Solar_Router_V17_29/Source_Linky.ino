@@ -247,11 +247,7 @@ void LectureLinky() {  //Lecture port série du LINKY .
               LTARF = val;  //Option Tarifaire
               LTARF.trim();
             }
-            if (code.indexOf("STGE") == 0) {
-              STGE = val;  //Status
-              STGE.trim();
-              STGE = STGE.substring(1, 2);  //Tempo lendemain et jour sur 1 octet
-            }
+            if (code.indexOf("STGE") == 0) STGEt = STGE.substring(1, 2);  //Tempo lendemain et jour sur 1 octet (STGE complet conservé)
           }
           if (code.indexOf("NGTF") == 0) {
             NGTF = val;  //Calendrier Tarifaire

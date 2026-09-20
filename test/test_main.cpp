@@ -261,13 +261,10 @@ static void test_linky_trame_valide() {
   // lentement (filtre 5%), la puissance active reste donc faible sur 2 trames.
   CHECK(PuissanceS_M >= 0 && PuissanceS_M <= PVAS_M);
 
-  // NOTE: comportement actuel de STGE. Le champ est d'abord copié entier puis,
-  // si TempoRTEon==0, réduit à son 2e caractère (couleur Tempo jour/lendemain).
-  CHECK_STR(STGE, "A");
-  // NOTE: comportement actuel, probable bug : STGEt (statut Tempo) n'est JAMAIS
-  // renseigné par la source Linky, seulement par la source "Ext"
-  // (Source_Externe.ino:93). Les pages web lisent pourtant STGEt.
-  CHECK_STR(STGEt, "");
+  // Correctif B2 : STGE complet conservé (publié en MQTT), STGEt = 2e caractère
+  // (nibble Tempo jour/lendemain) utilisé par l'accueil, l'écran et les esclaves.
+  CHECK_STR(STGE, "1A3B0001");
+  CHECK_STR(STGEt, "A");
 }
 
 static void test_linky_checksum_faux() {
@@ -807,6 +804,41 @@ static void test_mqtt_etat() {
   CHECK_STR(String(d["NGTF"].as<const char *>()), "BASE");
 }
 
+// Correctif B3 : Linky + 10 actions + 4 températures -> le message d'état
+// dépasse l'ancien buffer de 1200 octets ; il doit rester un JSON valide ou
+// ne pas être publié, jamais déborder.
+static void test_mqtt_etat_long() {
+  reset_commun();
+  Source = "Linky";
+  MQTTRepet = 10;
+  EnergieActiveValide = true;
+  pTriac = 1;
+  NbActions = LES_ACTIONS_LENGTH;
+  for (int i = 0; i < NbActions; i++) {
+    LesActions[i].Titre = "Action" + String(i);
+    LesActions[i].Actif = 1;
+    LesActions[i].H_Ouvre = 12.345678;
+    LesActions[i].tOnOff = -30;
+    Retard[i] = 42;
+  }
+  for (int c = 0; c < 4; c++) { Source_Temp[c] = "tempInt"; temperature[c] = 21.5; }
+  LTARF = "HC BLEU"; NGTF = "TEMPO"; STGE = "1A3B0001";
+  EASF01 = 12345678; EASF02 = 12345678; EASF03 = 12345678; EASF04 = 12345678; EASF05 = 12345678;
+  EASF06 = 12345678; EASF07 = 12345678; EASF08 = 12345678; EASF09 = 12345678; EASF10 = 12345678;
+  Energie_M_Soutiree = 123456789; Energie_M_Injectee = 123456789;
+  mock_mqtt_published.clear();
+  mock_mqtt_connected = true;
+  SendDataToHomeAssistant();
+  if (!mock_mqtt_published.empty()) {
+    JsonDocument doc;
+    CHECK(deserializeJson(doc, mock_mqtt_published.back().payload.c_str()) == DeserializationError::Ok);
+    CHECK_EQ((int)doc["Ouverture_Relais_9"], 58);
+    CHECK_EQ((long)doc["EASF10"], 12345678L);
+  } else {
+    CHECK(MessageH[0].indexOf("trop long") >= 0 || MessageH[1].indexOf("trop long") >= 0);
+  }
+}
+
 static void test_mqtt_callback_actions() {
   config_mqtt();
   mock_mqtt_connected = false;
@@ -1039,12 +1071,11 @@ static void test_record_data() {
   csv = String(mock_fs["/Mois_Wh_202609.csv"]);
   CHECK(csv.indexOf("20260921,5000,600,,,0.60,Suite\r\n") > 0);
 
-  // NOTE: comportement actuel. Record_Conf n'est pas renseigné lors de la
-  // création du fichier (Stockage.ino:595-598), l'en-tête est donc réécrit
-  // au 2e appel. Le test fige cette duplication.
+  // Correctif : Record_Conf renseigné à la création du fichier, l'en-tête
+  // n'est écrit qu'une fois.
   int premier = csv.indexOf("Date,Maison");
   int second = csv.indexOf("Date,Maison", premier + 1);
-  CHECK(second > premier);
+  CHECK(second == -1);
 
   // Date vide : aucun enregistrement
   size_t avant = mock_fs["/Mois_Wh_202609.csv"].size();
@@ -1067,6 +1098,7 @@ int main() {
   RUN(test_parametres_mode_standard);
   RUN(test_mqtt_discovery);
   RUN(test_mqtt_etat);
+  RUN(test_mqtt_etat_long);
   RUN(test_mqtt_callback_actions);
   RUN(test_mqtt_source_pmqtt);
   RUN(test_utilitaires);

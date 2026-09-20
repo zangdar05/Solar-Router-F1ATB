@@ -194,7 +194,7 @@ void sendMQTTDiscoveryMsg_global() {
   String ActionDur;
   String ActionOnOff;
   // augmente la taille du buffer wifi Mqtt (voir PubSubClient.h)
-  clientMQTT.setBufferSize(1700);  // voir -->#define MQTT_MAX_PACKET_SIZE 256 is the default value in PubSubClient.h
+  clientMQTT.setBufferSize(2300);  // voir -->#define MQTT_MAX_PACKET_SIZE 256 is the default value in PubSubClient.h
   if (Source == "UxIx2" || Source == "ShellyEm" || Source == "ShellyPro") {
     DeviceToDiscover("PuissanceS_T", "Puissance T Soutirée", "W", "power", "0");
     DeviceToDiscover("PuissanceI_T", "Puissance T Injectée", "W", "power", "0");
@@ -369,16 +369,17 @@ void SendDataToHomeAssistant() {
   String ActifType;
   String ActionDur;
   String ActionOnOff;
-  char value[1200];
+  char value[2000];
+#define RESTE(len, buf) ((size_t)(len) < sizeof(buf) ? sizeof(buf) - (len) : 0)  // évite le débordement si len > sizeof
   // On garde trace de la position
   int len = snprintf(value, sizeof(value), "{\"PuissanceS_M\": %d, \"PuissanceI_M\": %d, \"Tension_M\": %.1f, \"Intensite_M\": %.1f, \"PowerFactor_M\": %.2f, \"Energie_M_Soutiree\":%ld,\"Energie_M_Injectee\":%ld, \"EnergieJour_M_Soutiree\":%ld, \"EnergieJour_M_Injectee\":%ld", PuissanceS_M, PuissanceI_M, Tension_M, Intensite_M, PowerFactor_M, Energie_M_Soutiree, Energie_M_Injectee, EnergieJour_M_Soutiree, EnergieJour_M_Injectee);
 
   if (Source == "UxIx2" || Source == "ShellyEm" || Source == "ShellyPro") {
-    len += snprintf(value + len, sizeof(value) - len, ",\"PuissanceS_T\": %d, \"PuissanceI_T\": %d, \"Tension_T\": %.1f, \"Intensite_T\": %.1f, \"PowerFactor_T\": %.2f, \"Energie_T_Soutiree\":%ld,\"Energie_T_Injectee\":%ld, \"EnergieJour_T_Soutiree\":%ld, \"EnergieJour_T_Injectee\":%ld, \"Frequence\":%.2f", PuissanceS_T, PuissanceI_T, Tension_T, Intensite_T, PowerFactor_T, Energie_T_Soutiree, Energie_T_Injectee, EnergieJour_T_Soutiree, EnergieJour_T_Injectee, Frequence);
+    len += snprintf(value + len, RESTE(len, value), ",\"PuissanceS_T\": %d, \"PuissanceI_T\": %d, \"Tension_T\": %.1f, \"Intensite_T\": %.1f, \"PowerFactor_T\": %.2f, \"Energie_T_Soutiree\":%ld,\"Energie_T_Injectee\":%ld, \"EnergieJour_T_Soutiree\":%ld, \"EnergieJour_T_Injectee\":%ld, \"Frequence\":%.2f", PuissanceS_T, PuissanceI_T, Tension_T, Intensite_T, PowerFactor_T, Energie_T_Soutiree, Energie_T_Injectee, EnergieJour_T_Soutiree, EnergieJour_T_Injectee, Frequence);
   }
   for (int canal = 0; canal < 4; canal++) {
     if (temperature[canal] > -100 && Source_Temp[canal] != "tempNo") {
-      len += snprintf(value + len, sizeof(value) - len, ",\"Temperature_%s\": %.1f", String(canal).c_str(), temperature[canal]);
+      len += snprintf(value + len, RESTE(len, value), ",\"Temperature_%s\": %.1f", String(canal).c_str(), temperature[canal]);
     }
   }
 
@@ -406,23 +407,23 @@ void SendDataToHomeAssistant() {
       code = 18;
     if (LTARF.indexOf("TEMPO_ROUGE") >= 0)
       code = 19;
-    len += snprintf(value + len, sizeof(value) - len, ",\"LTARF\":\"%s\", \"Code_Tarifaire\":%d", LTARF.c_str(), code);
+    len += snprintf(value + len, RESTE(len, value), ",\"LTARF\":\"%s\", \"Code_Tarifaire\":%d", LTARF.c_str(), code);
   }
 
   if (TempoRTEon == 1) {
-    len += snprintf(value + len, sizeof(value) - len, ",\"RTE_Jour\":\"%s\", \"RTE_Demain\":\"%s\"", RTE_Jour.c_str(), RTE_Demain.c_str());
+    len += snprintf(value + len, RESTE(len, value), ",\"RTE_Jour\":\"%s\", \"RTE_Demain\":\"%s\"", RTE_Jour.c_str(), RTE_Demain.c_str());
   }
   if (Source == "Linky") {
-    len += snprintf(value + len, sizeof(value) - len, ",\"NGTF\":\"%s\"", NGTF.c_str());
-    len += snprintf(value + len, sizeof(value) - len, ",\"STGE\":\"%s\"", STGE.c_str());
-    len += snprintf(value + len, sizeof(value) - len, ",\"EASF01\":%ld, \"EASF02\":%ld, \"EASF03\":%ld, \"EASF04\":%ld, \"EASF05\":%ld, \"EASF06\":%ld,\"EASF07\":%ld, \"EASF08\":%ld, \"EASF09\":%ld, \"EASF10\":%ld", EASF01, EASF02, EASF03, EASF04, EASF05, EASF06, EASF07, EASF08, EASF09, EASF10);
+    len += snprintf(value + len, RESTE(len, value), ",\"NGTF\":\"%s\"", NGTF.c_str());
+    len += snprintf(value + len, RESTE(len, value), ",\"STGE\":\"%s\"", STGE.c_str());
+    len += snprintf(value + len, RESTE(len, value), ",\"EASF01\":%ld, \"EASF02\":%ld, \"EASF03\":%ld, \"EASF04\":%ld, \"EASF05\":%ld, \"EASF06\":%ld,\"EASF07\":%ld, \"EASF08\":%ld, \"EASF09\":%ld, \"EASF10\":%ld", EASF01, EASF02, EASF03, EASF04, EASF05, EASF06, EASF07, EASF08, EASF09, EASF10);
   }
   if (Source == "Enphase") {
-    len += snprintf(value + len, sizeof(value) - len, ",\"PactProd\":%d, \"PactConso_M\":%d", PactProd, PactConso_M);
+    len += snprintf(value + len, RESTE(len, value), ",\"PactProd\":%d, \"PactConso_M\":%d", PactProd, PactConso_M);
   }
   if (Source == "UxIx3") {  //Modif Piamp 8/12/2025
-    len += snprintf(value + len, sizeof(value) - len, ",\"Tension_M1\": %.1f, \"Intensite_M1\": %.1f,\"Tension_M2\": %.1f, \"Intensite_M2\": %.1f,\"Tension_M3\": %.1f, \"Intensite_M3\": %.1f, \"Frequence\":%.2f", Tension_M1, Intensite_M1, Tension_M2, Intensite_M2, Tension_M3, Intensite_M3, Frequence);
-    len += snprintf(value + len, sizeof(value) - len, ",\"PW_M1\": %.1f,\"PW_M2\": %.1f, \"PW_M3\": %.1f", PW_M1, PW_M2, PW_M3);
+    len += snprintf(value + len, RESTE(len, value), ",\"Tension_M1\": %.1f, \"Intensite_M1\": %.1f,\"Tension_M2\": %.1f, \"Intensite_M2\": %.1f,\"Tension_M3\": %.1f, \"Intensite_M3\": %.1f, \"Frequence\":%.2f", Tension_M1, Intensite_M1, Tension_M2, Intensite_M2, Tension_M3, Intensite_M3, Frequence);
+    len += snprintf(value + len, RESTE(len, value), ",\"PW_M1\": %.1f,\"PW_M2\": %.1f, \"PW_M3\": %.1f", PW_M1, PW_M2, PW_M3);
   }
   for (int i = 0; i < NbActions; i++) {
     if (pTriac > 0 || i > 0) {  // On envoi pas Triac si pas présent
@@ -437,20 +438,24 @@ void SendDataToHomeAssistant() {
         ActionOnOff = "Force_Triac_OnOff";
       }
       int Ouv = 100 - Retard[i];
-      len += snprintf(value + len, sizeof(value) - len, ",\"%s\":%d", ActType.c_str(), Ouv);
+      len += snprintf(value + len, RESTE(len, value), ",\"%s\":%d", ActType.c_str(), Ouv);
       if (Ouv != 0) {
-        len += snprintf(value + len, sizeof(value) - len, ",\"%s\":%d", ActifType.c_str(), 1);
+        len += snprintf(value + len, RESTE(len, value), ",\"%s\":%d", ActifType.c_str(), 1);
       } else {
-        len += snprintf(value + len, sizeof(value) - len, ",\"%s\":%d", ActifType.c_str(), 0);
+        len += snprintf(value + len, RESTE(len, value), ",\"%s\":%d", ActifType.c_str(), 0);
       }
-      len += snprintf(value + len, sizeof(value) - len, ",\"%s\":%f", ActionDur.c_str(), LesActions[i].H_Ouvre);
-      len += snprintf(value + len, sizeof(value) - len, ",\"%s\":%d", ActionOnOff.c_str(), LesActions[i].tOnOff);
+      len += snprintf(value + len, RESTE(len, value), ",\"%s\":%f", ActionDur.c_str(), LesActions[i].H_Ouvre);
+      len += snprintf(value + len, RESTE(len, value), ",\"%s\":%d", ActionOnOff.c_str(), LesActions[i].tOnOff);
     }
   }
   //Info ESP32
   float H = float(T_On_seconde) / 3600.0;
-  len += snprintf(value + len, sizeof(value) - len, ",\"ESP32_On\":%f", H);
+  len += snprintf(value + len, RESTE(len, value), ",\"ESP32_On\":%f", H);
 
-  len += snprintf(value + len, sizeof(value) - len, "}");
+  len += snprintf(value + len, RESTE(len, value), "}");
+  if (len >= (int)sizeof(value)) {  //JSON tronqué : on ne publie pas
+    StockMessage("MQTT : message d'état trop long (" + String(len) + " octets)");
+    return;
+  }
   clientMQTT.publish(StateTopic, value);
 }

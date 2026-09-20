@@ -593,6 +593,7 @@ void Record_Data(String dateAMJ, String MesSage, int16_t HeureCouranteDeci_) {
   float Duree = float(HeureCouranteDeci_) / 100.0;
   Data += "," + String(Duree) + "," + MesSage;
   if (!LittleFS.exists(AM_file)) {
+    Record_Conf = New_Record_Conf;
     File file = LittleFS.open(AM_file, FILE_WRITE);
     file.print(New_Record_Conf + "\r\n");
     file.close();

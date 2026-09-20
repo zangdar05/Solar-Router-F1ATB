@@ -1073,7 +1073,7 @@ void setup() {
   }
   for (int i = 0; i < LES_ROUTEURS_MAX; i++) {
     RMS_IP[i] = 0;  //IP du reseau
-    RMS_NomEtat[LES_ROUTEURS_MAX] = "";
+    RMS_NomEtat[i] = "";
     RMS_Note[i] = 0;
     RMS_NbCx[i] = 0;
   }
