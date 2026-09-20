@@ -1957,8 +1957,11 @@ const char *get_reset_reason_text(RESET_REASON reason) {
     case TG0WDT_SYS_RESET: return "Watchdog Timer 0 (TG0 WDT)";
     case TG1WDT_SYS_RESET: return "Watchdog Timer 1 (TG1 WDT)";
     case RTCWDT_SYS_RESET: return "Watchdog système RTC";
-    case INTRUSION_RESET: return "Interruption système";
+    case INTRUSION_RESET: return "Intrusion détectée";
+    case TGWDT_CPU_RESET: return "Watchdog Timer Group (CPU)";
+    case SW_CPU_RESET: return "Réinitialisation logicielle du CPU (ESP.restart)";
     case RTCWDT_CPU_RESET: return "Watchdog CPU RTC";
+    case EXT_CPU_RESET: return "Cœur 1 réinitialisé par le cœur 0";
     case RTCWDT_BROWN_OUT_RESET: return "Chute de tension (Brownout Reset)";
     case RTCWDT_RTC_RESET: return "Watchdog RTC global";
     default: return "Code inconnu";

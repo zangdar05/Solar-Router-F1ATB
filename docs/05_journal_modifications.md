@@ -14,6 +14,7 @@ Chaque étape = tests hôte verts (`python test/run_tests.py`) + build PlatformI
 | 5 | `c59b506` | Code mort, tables multi-sinus figées | 1 732 479 | 91 440 | 645 |
 | 6 | `383e90f` | Docs : chiffrage flash par fonctionnalité | — | — | — |
 | 7 | `4aa2cdb` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
+| 9 | (voir git) | Raisons de reset du core 3.x (SW_CPU_RESET, EXT_CPU_RESET, TGWDT_CPU_RESET) ; page Données brutes : lignes NGTF, STGE, couleur Tempo du jour et du lendemain décodées depuis STGE | 1 732 815 | 92 904 | 686 |
 | 8 | `7f505fb` | Historique 1 an en flux direct, plafond des lignes de diagnostic CSV (tas à 276 o constaté sur un routeur réel) | 1 732 435 | 92 904 | 686 |
 
 Marge flash finale : **213 165 octets** (48 041 à l'origine).

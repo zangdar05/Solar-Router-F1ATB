@@ -85,7 +85,11 @@ const L = [
   ["SINSTI", "Puissance app. instantanée injectée", false, "VA", 0],
   ["SMAXIN", "Puissance app. max injectée n", false, "VA", 1],
   ["SMAXIN-1", "Puissance app. max injectée n-1", false, "VA", 1],
-  ["LTARF", "Option Tarifaire", false, "", 2]
+  ["LTARF", "Option Tarifaire", false, "", 2],
+  ["NGTF", "Calendrier tarifaire", false, "", 2],
+  ["STGE", "Registre de statuts", false, "", 2],
+  ["TEMPOJ", "Couleur Tempo du jour (STGE)", false, "", 2],
+  ["TEMPOD", "Couleur Tempo du lendemain (STGE)", false, "", 2]
 ];
 
 // ============================================================================
@@ -466,6 +470,15 @@ async function LoadData() {
                         
                         if (colonnes[0] === 'DATE' && typeof LaDate === 'function') {
                             GH('dateLinky', LaDate(colonnes[1]));
+                        }
+                        if (colonnes[0] === 'STGE') {
+                            // Registre de statuts : bits 24-25 = couleur Tempo du jour, 26-27 = lendemain
+                            const stge = parseInt(colonnes[1], 16);
+                            const coul = ["Non défini", "Bleu", "Blanc", "Rouge"];
+                            GID('LTEMPOJ').style.display = "table-row";
+                            GH('hTEMPOJ', coul[(stge >>> 24) & 3]);
+                            GID('LTEMPOD').style.display = "table-row";
+                            GH('hTEMPOD', coul[(stge >>> 26) & 3]);
                         }
                         
                         // Traitement des données Linky à partir du tableau L
