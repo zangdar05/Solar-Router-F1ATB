@@ -188,8 +188,8 @@ function SendValues() {
   F.WifiSleep = GID("WifiSleep").checked ? 1 : 0;
   F.hostname =GID("hostname").value;
   F.pSerial = GID("Serie").value;
-  F.LinkyAux = GID("LinkyAux").value;
-  F.pSerialAux = GID("pSerialAux").value;
+  F.LinkyAux = parseInt(GID("LinkyAux").value);
+  F.pSerialAux = parseInt(GID("pSerialAux").value);
   F.pTriac = GID("pTriac").value;
   F.ModePara = document.querySelector('input[name="ModeP"]:checked').value;
   F.ModeReseau = GID("ModeW").value;

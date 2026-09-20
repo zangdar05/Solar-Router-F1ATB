@@ -295,5 +295,5 @@ TicData &TicPourMQTT() {
   return (Source == "Linky") ? ticPrincipal : ticAux;
 }
 bool LinkyDisponible() {  // Des données Linky (principale ou auxiliaire) existent
-  return Source == "Linky" || LinkyAux == 1;
+  return Source == "Linky" || LinkyAuxActif;
 }

@@ -230,7 +230,7 @@ void sendMQTTDiscoveryMsg_global() {
       DeviceToDiscover(nom, nom, "Wh", "energy", "0");
     }
   }
-  if (LinkyAux == 1 && Source != "Linky") {  //Linky auxiliaire : mesures propres au compteur
+  if (LinkyAuxActif && Source != "Linky") {  //Linky auxiliaire : mesures propres au compteur
     DeviceToDiscover("Linky_EAST", "Linky Energie Soutirée", "Wh", "energy", "0");
     DeviceToDiscover("Linky_EAIT", "Linky Energie Injectée", "Wh", "energy", "0");
     DeviceToDiscover("Linky_SINSTS", "Linky VA Soutirés", "VA", "apparent_power", "0");
@@ -425,7 +425,7 @@ void SendDataToHomeAssistant() {
     for (int i = 0; i < 10; i++) {
       len += snprintf(value + len, RESTE(len, value), ",\"EASF%02d\":%ld", i + 1, tic.EASF[i]);
     }
-    if (LinkyAux == 1 && Source != "Linky") {
+    if (LinkyAuxActif && Source != "Linky") {
       len += snprintf(value + len, RESTE(len, value), ",\"Linky_EAST\":%ld,\"Linky_EAIT\":%ld,\"Linky_SINSTS\":%d,\"Linky_SINSTI\":%d,\"Linky_PuissanceS\":%d,\"Linky_PuissanceI\":%d,\"Linky_URMS1\":%d,\"Linky_IRMS1\":%d",
                       tic.EAST, tic.EAIT, tic.SINSTS, tic.SINSTI, tic.PuissanceS, tic.PuissanceI, tic.URMS1, tic.IRMS1);
     }

@@ -270,6 +270,7 @@ extern volatile int OutOff[LES_ACTIONS_LENGTH];
 extern HardwareSerial MySerial;
 extern HardwareSerial SerialAux;
 extern byte LinkyAux;
+extern bool LinkyAuxActif;
 extern byte pSerialAux;
 extern bool LinkyAuxPerdu;
 #include "Linky.h"

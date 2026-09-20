@@ -347,8 +347,8 @@ void DeserializeConfiguration(String json) {
   ComSurv = conf["ComSurv"];
   pSerial = conf["pSerial"];
   Serial2V = conf["Serial2V"].isNull() ? Serial2V : conf["Serial2V"];
-  LinkyAux = conf["LinkyAux"] | LinkyAux;
-  pSerialAux = conf["pSerialAux"] | pSerialAux;
+  if (!conf["LinkyAux"].isNull()) LinkyAux = conf["LinkyAux"].as<int>();        // as<int> accepte "1" (chaîne du JS)
+  if (!conf["pSerialAux"].isNull()) pSerialAux = conf["pSerialAux"].as<int>();
   pTriac = conf["pTriac"];
   // Zone des actions
   ReacCACSI = conf["ReacCACSI"];

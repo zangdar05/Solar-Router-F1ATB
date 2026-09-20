@@ -266,6 +266,7 @@ static void test_linky_aux() {
   Source = "UxIx2";
   Source_data = "UxIx2";
   LinkyAux = 1;
+  LinkyAuxActif = true;
   pSerialAux = 2;  // RX gpio 26
   SerialAux.mock_clear();
   ticAux = TicData();
@@ -341,6 +342,7 @@ static void test_linky_aux() {
   CHECK(deserializeJson(doc, mock_mqtt_published.back().payload.c_str()) == DeserializationError::Ok);
   CHECK(doc["Linky_EAST"].isNull());
   LinkyAux = 0;
+  LinkyAuxActif = false;
   Source = "NotDef";
 }
 
@@ -742,6 +744,22 @@ static void test_parametres_roundtrip() {
   CHECK_EQ(LesActions[1].Tempo, 12);
   CHECK_EQ((int)LesActions[1].Vmin[0], -200);
   CHECK_EQ((int)LesActions[1].Tarif[0], 4);
+}
+
+// Le JS envoie des chaînes ("1") : LinkyAux/pSerialAux doivent être acceptés
+static void test_parametres_linkyaux_chaine() {
+  reset_commun();
+  LinkyAux = 0; pSerialAux = 0;
+  String json = SerializeConfiguration();
+  json.replace("\"LinkyAux\":0", "\"LinkyAux\":\"1\"");
+  json.replace("\"pSerialAux\":0", "\"pSerialAux\":\"2\"");
+  DeserializeConfiguration(json);
+  CHECK_EQ((int)LinkyAux, 1);
+  CHECK_EQ((int)pSerialAux, 2);
+  DeserializeConfiguration(SerializeConfiguration());  // aller-retour numérique
+  CHECK_EQ((int)LinkyAux, 1);
+  CHECK_EQ((int)pSerialAux, 2);
+  LinkyAux = 0; pSerialAux = 0;
 }
 
 static void test_parametres_mode_standard() {
@@ -1254,6 +1272,7 @@ int main() {
   RUN(test_para_en_cours);
   RUN(test_parametres_roundtrip);
   RUN(test_parametres_mode_standard);
+  RUN(test_parametres_linkyaux_chaine);
   RUN(test_mqtt_discovery);
   RUN(test_mqtt_etat);
   RUN(test_mqtt_etat_long);

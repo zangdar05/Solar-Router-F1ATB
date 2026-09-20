@@ -625,7 +625,8 @@ String RTE_Jour = "NON_DEFINI";
 String RTE_Demain = "NON_DEFINI";
 //Linky auxiliaire : lecture seule sur un second UART (RX seul), indépendante de Source
 HardwareSerial SerialAux(1);
-byte LinkyAux = 0;      //1 = actif
+byte LinkyAux = 0;      //1 = demandé (paramètre sauvegardé)
+bool LinkyAuxActif = false;  //Port réellement ouvert (après contrôle de conflit au setup)
 byte pSerialAux = 0;    //Index dans RX2_[] du GPIO RX
 bool LinkyAuxPerdu = false;
 TicData ticPrincipal;                //Décodage TIC de la source principale (Source == "Linky")
@@ -1277,9 +1278,9 @@ void setup() {
   if (LinkyAux == 1) {
     if (pSerialAux == 0 || Source == "Linky" || RX2_[pSerialAux] == RXD2 || RX2_[pSerialAux] == TXD2) {
       StockMessage("Linky auxiliaire ignoré : GPIO non défini, en conflit avec le port série 2, ou source déjà Linky");
-      LinkyAux = 0;
     } else {
       Setup_LinkyAux();
+      LinkyAuxActif = true;
     }
   }
   LireSerial();
@@ -1347,7 +1348,7 @@ void Task_LectureRMS(void *pvParameters) {
   }
   for (;;) {
     unsigned long tps = millis();
-    if (LinkyAux == 1) LectureLinkyAux();
+    if (LinkyAuxActif) LectureLinkyAux();
     float deltaT = float(tps - previousTimeRMS);
     previousTimeRMS = tps;
     previousTimeRMSMin = min(previousTimeRMSMin, deltaT);
@@ -1678,7 +1679,7 @@ void loop() {
       erreurTriac = false;
     }
     if (ESP32_Type == 0) StockMessage("! Carte ESP32 non définie !");
-    if (LinkyAux == 1) {  //Diagnostic Linky auxiliaire
+    if (LinkyAuxActif) {  //Diagnostic Linky auxiliaire
       bool perdu = (ticAux.nbTrames == 0) || (millis() - ticAux.lastFrameMs > 60000);
       if (perdu && !LinkyAuxPerdu) StockMessage("Linky auxiliaire : aucune trame depuis 60 s");
       if (!perdu && LinkyAuxPerdu) StockMessage("Linky auxiliaire : trames de nouveau reçues");
