@@ -144,7 +144,7 @@ function SetParaFixe() {
     GID("NumPageBoot").value = F.NumPageBoot;
     GID("pUxI").value = F.pUxI;
     GID("PTemp").value = F.pTemp;
-    GID("EstimCACSI").checked = (F.ReacCACSI == 100)? true:false; 1;
+    GID("EstimCACSI").checked = (F.ReacCACSI == 100)? true:false; 
 
     // --- Paramètres de Température (LesParas[1] à LesParas[4]) ---
     const NbCanauxTemp = 4;

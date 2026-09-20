@@ -1,4 +1,4 @@
-#define Version "17.26"  //
+#define Version "17.29"  //
 #define HOSTNAME "RMS-ESP32-"
 
 
@@ -322,7 +322,13 @@
     Fourniture (nouvelle version) dans le message Source externe des tensions et courants pour la variante du programme adaptée aux Véhicules Electriques 
   - Version 17.26
     Suppression page OTA pour les routeurs non connectés à Internet 
-
+  - Version 17.27
+   Réduction de 10k à 4k octets la taille du buffer pour le Linky. Cela est suffisant et on gagne 6k de mémoire
+    Amélioration du code pour Source Enphase proposée par rdsoft30 6/07/26
+  - Version 17.28 retiré
+  - Version 17.29
+    Affichage de la raison du dernier reset pour les 2 coeurs à la nouvelle mise en route
+    Nouvelles améliorations du code pour les Sources Enphase
  
 
 
@@ -330,12 +336,12 @@
   https://f1atb.fr  Section Domotique / Home Automation
 
   
-  F1ATB Juillet 2026
+  F1ATB Août 2026
 
   GNU Affero General Public License (AGPL) / AGPL-3.0-or-later
 
-  Arduino IDE 2.3.8
-  Espressif ESP V3.3.8
+  Arduino IDE 2.3.10
+  Espressif ESP V3.3.11
   Compilation avec Partition Scheme : custom 
 
 
@@ -369,6 +375,7 @@
 #include "esp_flash.h"
 #include "CST820.h"
 #include "initGT911.h"
+#include <rom/rtc.h>
 
 
 // Pages WEB
@@ -496,17 +503,7 @@ bool LastRecordConf = false;
 // ***************************
 // Stockage des données en ROM
 // ***************************
-//Plan stockage
 
-#define adr_HistoAn 0          //taille 2* 370*4=1480
-#define adr_E_T_soutire0 1480  // 1 long. Taille 4 Triac
-#define adr_E_T_injecte0 1484
-#define adr_E_M_soutire0 1488    // 1 long. Taille 4 Maison
-#define adr_E_M_injecte0 1492    // 1 long. Taille 4
-#define adr_DateCeJour 1496      // String 8+1
-#define adr_lastStockConso 1505  // Short taille 2
-#define adr_ParaActions 1507     //Clé + ensemble parametres peu souvent modifiés
-#define NbJour 370               //Nb jour historique stocké
 
 //Paramètres écran
 byte rotation = 3;
@@ -631,7 +628,7 @@ bool EASTvalid = false;
 bool EAITvalid = false;
 volatile int IdxDataRawLinky = 0;
 volatile int IdxBufDecodLinky = 0;
-volatile char DataRawLinky[10000];  //Buffer entrée données Linky
+volatile char DataRawLinky[4000];  //Buffer entrée données Linky
 float moyPWS = 0;
 float moyPWI = 0;
 float moyPVAS = 0;
@@ -669,6 +666,8 @@ long LastwhRcvdCum = 0;             //Dernière valeur cumul Wh injecté
 float EMI_Wh = 0;                   //Energie entrée Maison Injecté Wh
 float EMS_Wh = 0;                   //Energie entrée Maison Soutirée Wh
 unsigned long lastTokenUpdate = 0;  //interval de temps depuis dernier Token Enphase //SR19
+#define ENPHASE_READING_PERIOD 2000
+void Setup_Enphase(bool NewToken = false);  // MC001 pour gérer Load/Save token Source_Enphase pb déclaration avec paramètre optionnel
 
 //Paramètres for SmartGateways
 String SG_dataBrute = "";
@@ -840,6 +839,8 @@ esp_err_t ESP32_ERROR;
 bool PuissanceRecue = false;
 int PuissanceValide = 5;
 
+
+
 //Gestion Interruption sur pulse interne ou du Triac
 //****************************************************
 void IRAM_ATTR GestionIT_10ms() {
@@ -986,6 +987,18 @@ void setup() {
   Serial.println();
   StockMessage("Booting Routeur F1ATB");
   Serial.println(Version);
+
+  //Reset Reason
+  Serial.println("\n--- ANALSE DU DERNIER BOOT ---");
+
+  // Cœur 0 : PRO_CPU (Core 0)
+  print_cpu_reset_reason(0);
+
+  // Cœur 1 : APP_CPU (Core 1)
+  print_cpu_reset_reason(1);
+
+  Serial.println("--------------------------------\n");
+
   //Watchdog initialisation
   esp_task_wdt_deinit();
   // Initialisation de la structure de configuration pour la WDT
@@ -996,7 +1009,6 @@ void setup() {
   };
   // Initialisation de la WDT avec la structure de configuration
   ESP32_ERROR = esp_task_wdt_init(&wdt_config);
-  StockMessage("Dernier Reset : " + String(esp_err_to_name(ESP32_ERROR)));
   esp_task_wdt_add(NULL);  //add current thread to WDT watch
   esp_task_wdt_reset();
   delay(1);  //VERY VERY IMPORTANT for Watchdog Reset
@@ -1061,7 +1073,7 @@ void setup() {
   }
   for (int i = 0; i < LES_ROUTEURS_MAX; i++) {
     RMS_IP[i] = 0;  //IP du reseau
-    RMS_NomEtat[LES_ROUTEURS_MAX]="";
+    RMS_NomEtat[LES_ROUTEURS_MAX] = "";
     RMS_Note[i] = 0;
     RMS_NbCx[i] = 0;
   }
@@ -1411,10 +1423,13 @@ void Task_LectureRMS(void *pvParameters) {
         }
       }
       if (Source == "Enphase") {
-        LectureEnphase();
-        LastRMS_Millis = millis();
-        PeriodeProgMillis = 2000;  // + ralenti;  //On s'adapte à la vitesse réponse Envoy-S metered
+        uint32_t nReadingDuration = LectureEnphase();
+        if (nReadingDuration > ENPHASE_READING_PERIOD)  // si la lecture de l'Enphase a durée plus de temps que la période de lecture //On s'adapte à la vitesse réponse Envoy-S metered
+          PeriodeProgMillis = nReadingDuration + 500;
+        else
+          PeriodeProgMillis = ENPHASE_READING_PERIOD;
       }
+
       if (Source == "SmartG") {
         LectureSmartG();
         LastRMS_Millis = millis();
@@ -1957,4 +1972,29 @@ void H_Ouvre_Equivalent(unsigned long dt) {
       }
     }
   }
+}
+
+// RESET REASON
+const char *get_reset_reason_text(RESET_REASON reason) {
+  switch (reason) {
+    case POWERON_RESET: return "Mise sous tension (Power-On)";
+    case SW_RESET: return "Réinitialisation logicielle (Software Reset)";
+    case OWDT_RESET: return "Watchdog RTC (OWDT)";
+    case DEEPSLEEP_RESET: return "Sortie de veille profonde (Deep Sleep)";
+    case SDIO_RESET: return "Réinitialisation par SDIO";
+    case TG0WDT_SYS_RESET: return "Watchdog Timer 0 (TG0 WDT)";
+    case TG1WDT_SYS_RESET: return "Watchdog Timer 1 (TG1 WDT)";
+    case RTCWDT_SYS_RESET: return "Watchdog système RTC";
+    case INTRUSION_RESET: return "Interruption système";
+    case RTCWDT_CPU_RESET: return "Watchdog CPU RTC";
+    case RTCWDT_BROWN_OUT_RESET: return "Chute de tension (Brownout Reset)";
+    case RTCWDT_RTC_RESET: return "Watchdog RTC global";
+    default: return "Code inconnu";
+  }
+}
+
+void print_cpu_reset_reason(int cpu_core) {
+  RESET_REASON reason = rtc_get_reset_reason(cpu_core);
+  Serial.printf("Cœur %d - Code (%d) : %s\n", cpu_core, reason, get_reset_reason_text(reason));
+  StockMessage("Dernier reset Cœur "+String(cpu_core) + " : " + String(get_reset_reason_text(reason)));
 }
