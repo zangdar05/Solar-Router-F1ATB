@@ -506,7 +506,7 @@ function AdaptationSource() {
                                  
             break;
         case 'Zendure':
-            lab_enphaseShelly = "ID de la mesure Zendure : <span class='fsize10'><br>Vide = 3 (entrée par défaut du 1CT-S), 15 = total ?<br>ID négatif (ex. -3) = signe inversé</span>";
+            lab_enphaseShelly = "ID de la mesure Zendure : <span class='fsize10'><br>Vide = 3 (entrée par défaut du 1CT-S), 15 = total ?<br>ID négatif (ex. -3) = signe inversé (non nécessaire sur 1CT-S)</span>";
             break;
     }
     

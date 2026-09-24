@@ -4,9 +4,11 @@
 // ************************************************************************
 // Structure déduite des captures (validée par le CRC) :
 //   [préfixe 0-2 o] AA 55 <type u16> <n° seq> FF <longueur u16> <charge> <CRC16/MODBUS poids fort d'abord>
-//   CRC calculé de AA 55 à la fin de la charge. Type 0x010A : blocs [ID u16][taille u16 = 4][valeur int32], big-endian.
+//   CRC calculé de AA 55 à la fin de la charge. Le 2e octet du type change d'une session à l'autre (0x010A, 0x0106...) :
+//   la trame de mesure du 1CT-S (préfixe 01 00, toutes les 600 ms) se reconnaît à sa charge en blocs
+//   [ID u16][taille u16 = 4][valeur int32], big-endian. La trame du préfixe 02 00 (toutes les 3,6 s, charge FFFF 0002 FFFF) est ignorée.
 // L'ID lu est le paramètre EnphaseSerial (vide = 3, entrée de mesure par défaut du 1CT-S) ;
-// un ID négatif inverse le signe. Convention supposée : valeur positive = soutirage réseau.
+// un ID négatif inverse le signe. Convention du 1CT-S : positif = soutirage réseau, négatif = injection.
 
 void Setup_Zendure() {
   Serial2V = 115200;  //On force la vitesse
@@ -18,7 +20,6 @@ void Setup_Zendure() {
 // Trame complète au CRC valide, p[0..1] = AA 55
 void TrameZendure(const uint8_t *p, int n) {
   ZdNbOK++;
-  if (((p[2] << 8) | p[3]) != 0x010A) return;  // autres types : rôle inconnu
   int id = EnphaseSerial.toInt();
   bool inverse = id < 0;
   id = abs(id);
@@ -27,6 +28,7 @@ void TrameZendure(const uint8_t *p, int n) {
   bool trouve = false;
   float Pw = 0;
   int fin = 8 + ((p[6] << 8) | p[7]);
+  if (fin == 8 || (fin - 8) % 8) return;  // pas une trame de mesure
   for (int k = 8; k + 8 <= fin; k += 8) {
     if (((p[k + 2] << 8) | p[k + 3]) != 4) return;
     int ident = (p[k] << 8) | p[k + 1];

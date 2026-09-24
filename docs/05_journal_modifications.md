@@ -14,14 +14,15 @@ Chaque étape = tests hôte verts (`python test/run_tests.py`) + build PlatformI
 | 5 | `c59b506` | Code mort, tables multi-sinus figées | 1 732 479 | 91 440 | 645 |
 | 6 | `383e90f` | Docs : chiffrage flash par fonctionnalité | — | — | — |
 | 7 | `4aa2cdb` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
-| 13 | `HEAD` | **Source Zendure 1CT-S** : écoute RS485 du bus 1CT-S ↔ SolarFlow (trames AA 55, CRC16), ID de mesure réglable (défaut 3), bloc Données brutes (§ 6) | 1 735 567 | 93 240 | 714 |
+| 14 | `HEAD` | Zendure : trame de mesure reconnue à sa charge (le type change d'une session à l'autre : 0x010A, 0x0106), trame 02 00 de 3,6 s ignorée ; signe confirmé (négatif = injection) | 1 735 559 | 93 240 | 717 |
+| 13 | `de1199b` | **Source Zendure 1CT-S** : écoute RS485 du bus 1CT-S ↔ SolarFlow (trames AA 55, CRC16), ID de mesure réglable (défaut 3), bloc Données brutes (§ 6) | 1 735 567 | 93 240 | 714 |
 | 12 | `21f80cb` | Linky auxiliaire : estimateur d'injection CACSI aussi sur l'auxiliaire, entité MQTT `Linky_Pw` (W signés), flux TIC auxiliaire affiché dans Données brutes (tableau Linky) | 1 733 507 | 92 904 | 690 |
 | 11 | `0214fb2` | MQTT : état publié dès que le Linky auxiliaire est actif, même sans source de puissance valide (Source = Pmqtt sans publication) | 1 732 815 | 92 904 | 690 |
 | 10 | `3c79fd1` | Linky auxiliaire : sauvegarde des paramètres corrigée (chaîne JS vs `\|` ArduinoJson), état d'exécution `LinkyAuxActif` séparé du paramètre | 1 732 807 | 92 904 | 690 |
 | 9 | `8bcdc36` | Raisons de reset du core 3.x (SW_CPU_RESET, EXT_CPU_RESET, TGWDT_CPU_RESET) ; page Données brutes : lignes NGTF, STGE, couleur Tempo du jour et du lendemain décodées depuis STGE | 1 732 815 | 92 904 | 686 |
 | 8 | `7f505fb` | Historique 1 an en flux direct, plafond des lignes de diagnostic CSV (tas à 276 o constaté sur un routeur réel) | 1 732 435 | 92 904 | 686 |
 
-Marge flash finale : **210 033 octets** (48 041 à l'origine).
+Marge flash finale : **210 041 octets** (48 041 à l'origine).
 
 Hashes GitHub (dépôt `zangdar05/Solar-Router-F1ATB`, branche `main`, historique rejoué sur V17.26) : V17.29 = `d22173d`, S1 = `4aa2cdb`, étape 8 = `7f505fb`.
 
@@ -94,11 +95,18 @@ Non corrigés (documentés) : B10 appels bloquants sur le cœur 1, B11 absence d
 Utiliser comme source de puissance maison le compteur Zendure 1CT-S (pince CT) qui pilote un SolarFlow 1600 AC+, sans matériel de mesure supplémentaire : le routeur écoute en parallèle le bus RS485 entre les deux appareils. Le protocole n'est pas du Modbus : sa structure a été établie à l'aide du firmware « ESP Modbus Spy » sur des captures réelles, puis validée par le CRC.
 
 ```
-[01 00]  AA 55  01 0A  seq  FF  00 20  { ID u16 | taille u16 = 4 | valeur int32 } × 4  CRC_fort CRC_faible
+[01 00]  AA 55  01 xx  seq  FF  00 20  { ID u16 | taille u16 = 4 | valeur int32 } × 4  CRC_fort CRC_faible
 préfixe  début  type   n°       long.   charge (big-endian)                            CRC16/MODBUS de AA 55 à la fin de la charge
 ```
 
-Une trame de type `0x010A` arrive toutes les 600 ms (115200 8N1). Elle porte les ID 1, 2, 3 et 15 ; sur l'installation observée (une seule pince), l'ID 3 porte la puissance et l'ID 15 la même valeur (somme ou entrée par défaut : à confirmer avec plusieurs pinces).
+La trame de mesure du 1CT-S (préfixe `01 00`) arrive toutes les 600 ms (115200 8N1). Elle porte les ID 1, 2, 3 et 15 ; sur l'installation observée (une seule pince), l'ID 3 porte la puissance et l'ID 15 la même valeur (somme ou entrée par défaut : à confirmer avec plusieurs pinces). Signe confirmé : positif = soutirage, négatif = injection.
+
+| Trame | Préfixe | Type observé | Période | Charge |
+|---|---|---|---|---|
+| Mesure du 1CT-S | `01 00` | `0x010A` puis `0x0106` (le 2e octet change d'une session à l'autre) | 600 ms | 4 blocs [ID][4][int32] |
+| Émetteur n° 2 (SolarFlow probable) | `02 00` | `0x0122` puis `0x012E` | 3,6 s, 10 à 85 ms après une trame de mesure sur 6 | 6 octets constants `FFFF 0002 FFFF` (bloc ID 0xFFFF, taille 2, valeur 0xFFFF ?) : acquittement ou signe de vie, aucune mesure |
+
+Le routeur ne filtre donc pas sur le type : une trame est une mesure si sa charge est faite de blocs de 4 octets.
 
 ### 6.2 Ce qui a changé
 | Fichier | Modification |
@@ -114,13 +122,12 @@ Aucune nouvelle clé dans `parametres.json`.
 ### 6.3 Câblage et configuration
 1. Module TTL↔RS485 alimenté en 3,3 V : A/B en parallèle sur le bus 1CT-S ↔ SolarFlow, RO (ou TXD d'un module auto-direction) sur le RX du port série 2 choisi, masses reliées. Le TX n'est pas utilisé : le routeur n'émet jamais sur le bus.
 2. Paramètres : Source = « Zendure 1CT-S (RS485) », Port série 2 = broches choisies (vitesse forcée à 115200).
-3. Champ « ID de la mesure Zendure » : vide = 3 ; `15` pour l'ID 15 ; un ID négatif (`-3`) inverse le signe si le test d'une charge connue (bouilloire) montre une injection au lieu d'un soutirage.
+3. Champ « ID de la mesure Zendure » : vide = 3 ; `15` pour l'ID 15 ; un ID négatif (`-3`) inverse le signe (inutile avec le 1CT-S, dont la convention est celle du routeur).
 
 ### 6.4 Limites
-- Convention de signe supposée (positif = soutirage) ; non vérifiée sur installation réelle.
-- Rôle des autres entrées de mesure du 1CT-S et de l'ID 15 non établi (une seule pince disponible) ; trames de type `0x0122` ignorées.
+- Rôle des autres entrées de mesure du 1CT-S et de l'ID 15 non établi (une seule pince disponible) ; trames du préfixe `02 00` ignorées.
 - Pas de VA ni de cos φ : `Pva_valide = false`. Les totaux d'énergie repartent des valeurs de minuit après un reset (comme la source MQTT).
-- Watchdog : sans trame valide pendant ≈ 2 min, le routeur redémarre (« Puissances non reçues »), comme pour les autres sources. Un câblage bruité fait perdre des trames (compteur « rejetées »).
+- Watchdog : sans trame valide pendant ≈ 2 min, le routeur redémarre (« Puissances non reçues »), comme pour les autres sources. Un câblage bruité fait perdre des trames (compteur « rejetées ») : sur les captures du 24/09, environ une trame de mesure sur deux arrivait tronquée, la fin de la trame manquant entièrement.
 
 ## 7. Procédure après toute modification
 ```

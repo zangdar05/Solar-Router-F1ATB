@@ -989,8 +989,8 @@ static void test_mqtt_source_pmqtt() {
 }
 
 // Zendure 1CT-S : trame AA 55 type 0x010A, blocs [ID][4][int32], CRC16/MODBUS poids fort d'abord
-static std::string trame_zendure(int32_t id1, int32_t id3, int32_t id15, uint8_t seq) {
-  std::vector<uint8_t> b = {0xAA, 0x55, 0x01, 0x0A, seq, 0xFF, 0x00, 0x20};
+static std::string trame_zendure(int32_t id1, int32_t id3, int32_t id15, uint8_t seq, uint8_t type = 0x0A) {
+  std::vector<uint8_t> b = {0xAA, 0x55, 0x01, type, seq, 0xFF, 0x00, 0x20};
   const int32_t ids[4][2] = {{1, id1}, {2, 0}, {3, id3}, {15, id15}};
   for (auto &k : ids) {
     b.insert(b.end(), {0, (uint8_t)k[0], 0, 4});
@@ -1074,14 +1074,27 @@ static void test_zendure() {
   CHECK_EQ(PuissanceI_M, 300);
   CHECK(Zendure_dataBrute.indexOf("absent") >= 0);
 
-  // CRC faux : trame rejetée
+  // Type d'une autre session (0x0106) accepté ; trame 02 00 de 3,6 s (charge FFFF 0002 FFFF) ignorée
   EnphaseSerial = "";
+  MySerial.mock_feed(trame_zendure(0, 250, 250, 7, 0x06));
+  LectureZendure();
+  CHECK_EQ(PuissanceS_M, 250);
+  const char *hb = "0200AA55012E99FF0006FFFF0002FFFFD8FA";  // capturée, CRC valide
+  std::string hbs;
+  for (const char *h = hb; h[0]; h += 2) hbs += (char)strtoul(std::string(h, 2).c_str(), nullptr, 16);
+  unsigned long okAvant = ZdNbOK;
+  MySerial.mock_feed(hbs);
+  LectureZendure();
+  CHECK_EQ((long)ZdNbOK, (long)okAvant + 1);
+  CHECK_EQ(PuissanceS_M, 250);
+
+  // CRC faux : trame rejetée
   std::string bad = trame_zendure(0, 999, 999, 6);
   bad[20] ^= 1;
   MySerial.mock_feed(bad);
   LectureZendure();
   CHECK_EQ((long)ZdNbKO, 2L);
-  CHECK_EQ(PuissanceI_M, 300);
+  CHECK_EQ(PuissanceS_M, 250);
 }
 
 // ===========================================================================
