@@ -26,9 +26,10 @@ Mesures : `python -m platformio run` (core ESP32 3.3.12, `partitions.csv` du pro
 | 2 Pages web gzip | `500dd0d` | 1 733 583 | **−164 852** | 89,1 % | 91 648 |
 | 3 Code mort + tables multi-sinus | `c59b506` | 1 732 479 | −1 104 | 89,0 % | 91 440 |
 | 4 Linky auxiliaire (S1) + patchs + parseurs Enphase | `3eb0485` | 1 734 015 | +1 536 | 89,1 % | 92 904 |
-| **Total** | | **1 734 015** | **−163 544 (−8,6 %)** | | +1 144 |
+| 5 Source Zendure 1CT-S (réf. `21f80cb` : 1 733 507 / 92 904) | `HEAD` | 1 735 567 | +2 060 | 89,2 % | 93 240 |
+| **Total** | | **1 735 567** | **−161 992 (−8,5 %)** | | +1 480 |
 
-Marge disponible : **211 585 octets** (au lieu de 48 041), soit de quoi ajouter le « Linky auxiliaire » (`04_architecture_mqtt_linky.md`, ≈ 6 Ko), un second UART, des entités HA supplémentaires, etc.
+Marge disponible : **210 033 octets** (au lieu de 48 041), soit de quoi ajouter le « Linky auxiliaire » (`04_architecture_mqtt_linky.md`, ≈ 6 Ko), un second UART, des entités HA supplémentaires, etc.
 
 ## 3. Détail des optimisations réalisées
 
@@ -71,6 +72,7 @@ Ventilation des symboles du `firmware.elf` (`xtensa-esp32-elf-nm --size-sort`) p
 | Source Enphase (hors TLS) | ≈ 6 Ko | Oui | 11 parseurs JSON quasi identiques (≈ 2 Ko factorisables) |
 | Source externe / routeurs partenaires | ≈ 6 Ko | Non | |
 | Températures (OneWire, Dallas) | ≈ 4 Ko | Oui | |
+| Source Zendure 1CT-S (RS485, écoute) | ≈ 2 Ko | Oui | |
 | Source Linky | ≈ 4 Ko | Non | Un « Linky auxiliaire » coûte ≈ +6 Ko (décodage partagé) |
 | Console série/Telnet, utilitaires | ≈ 4 Ko | Non | |
 | Tempo RTE (hors TLS) | ≈ 3 Ko | Oui | |

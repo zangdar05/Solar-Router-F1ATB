@@ -988,6 +988,102 @@ static void test_mqtt_source_pmqtt() {
   CHECK_EQ(PVAI_M, 600);
 }
 
+// Zendure 1CT-S : trame AA 55 type 0x010A, blocs [ID][4][int32], CRC16/MODBUS poids fort d'abord
+static std::string trame_zendure(int32_t id1, int32_t id3, int32_t id15, uint8_t seq) {
+  std::vector<uint8_t> b = {0xAA, 0x55, 0x01, 0x0A, seq, 0xFF, 0x00, 0x20};
+  const int32_t ids[4][2] = {{1, id1}, {2, 0}, {3, id3}, {15, id15}};
+  for (auto &k : ids) {
+    b.insert(b.end(), {0, (uint8_t)k[0], 0, 4});
+    for (int s = 24; s >= 0; s -= 8) b.push_back((uint8_t)((uint32_t)k[1] >> s));
+  }
+  uint16_t c = 0xFFFF;
+  for (uint8_t x : b) {
+    c ^= x;
+    for (int i = 0; i < 8; i++) c = (c & 1) ? (c >> 1) ^ 0xA001 : c >> 1;
+  }
+  b.push_back(c >> 8);
+  b.push_back(c & 0xFF);
+  return std::string("\x01\x00", 2) + std::string(b.begin(), b.end());
+}
+
+static void test_zendure() {
+  reset_commun();
+  Source = "Zendure";
+  pSerial = 1;
+  RXD2 = 16;
+  TXD2 = 17;
+  LissageLong = false;
+  init_puissance();
+  EnphaseSerial = "";
+  ZdN = 0;
+  ZdNbOK = ZdNbKO = ZdLastMillis = 0;
+  Energie_M_Soutiree = 1000;
+  Energie_M_Injectee = 500;
+  Setup_Zendure();
+  CHECK(MySerial.started);
+  CHECK_EQ(Serial2V, 115200u);
+  CHECK_EQ(MySerial.cfg, (int)SERIAL_8N1);
+  CHECK_EQ(MySerial.pinTx, -1);  // écoute seule
+
+  // Le générateur reproduit une trame capturée sur un 1CT-S (CRC 6C 04)
+  std::string cap = trame_zendure(0, -58, -58, 0x23);
+  const char *capHex = "0100AA55010A23FF00200001000400000000000200040000000000030004FFFFFFC6000F0004FFFFFFC66C04";
+  std::string capRef;
+  for (const char *h = capHex; h[0]; h += 2) capRef += (char)strtoul(std::string(h, 2).c_str(), nullptr, 16);
+  CHECK(cap == capRef);
+
+  // Soutirage sur l'ID 3 par défaut ; totaux repris des valeurs relues au démarrage
+  mock_set_millis(20000);
+  MySerial.mock_feed(trame_zendure(0, 1200, 1200, 1));
+  LectureZendure();
+  CHECK_EQ((long)ZdNbOK, 1L);
+  CHECK_EQ(PuissanceS_M, 1200);
+  CHECK_EQ(PuissanceI_M, 0);
+  CHECK(PuissanceRecue);
+  CHECK(EnergieActiveValide);
+  CHECK(!Pva_valide);
+  CHECK_EQ(Energie_M_Soutiree, 1000L);
+  CHECK(Zendure_dataBrute.indexOf("ID3=1200") >= 0);
+
+  // Trame tronquée (octets perdus) puis trame d'injection reçue en deux morceaux
+  std::string t2 = trame_zendure(0, -800, -800, 2);
+  MySerial.mock_feed(trame_zendure(0, 5, 5, 3).substr(0, 39) + t2.substr(0, 20));
+  mock_set_millis(20600);
+  LectureZendure();
+  CHECK_EQ(PuissanceS_M, 1200);  // trame pas encore complète
+  MySerial.mock_feed(t2.substr(20));
+  LectureZendure();
+  CHECK_EQ(PuissanceI_M, 800);
+  CHECK_EQ(PuissanceS_M, 0);
+  CHECK_EQ((long)ZdNbOK, 2L);
+  CHECK_EQ((long)ZdNbKO, 1L);
+
+  // ID 15 avec signe inversé
+  EnphaseSerial = "-15";
+  MySerial.mock_feed(trame_zendure(0, 100, 300, 4));
+  mock_set_millis(21200);
+  LectureZendure();
+  CHECK_EQ(PuissanceI_M, 300);
+
+  // ID absent de la trame : pas de mise à jour ni de reset du watchdog
+  EnphaseSerial = "7";
+  PuissanceRecue = false;
+  MySerial.mock_feed(trame_zendure(0, 100, 100, 5));
+  LectureZendure();
+  CHECK(!PuissanceRecue);
+  CHECK_EQ(PuissanceI_M, 300);
+  CHECK(Zendure_dataBrute.indexOf("absent") >= 0);
+
+  // CRC faux : trame rejetée
+  EnphaseSerial = "";
+  std::string bad = trame_zendure(0, 999, 999, 6);
+  bad[20] ^= 1;
+  MySerial.mock_feed(bad);
+  LectureZendure();
+  CHECK_EQ((long)ZdNbKO, 2L);
+  CHECK_EQ(PuissanceI_M, 300);
+}
+
 // ===========================================================================
 // 6 bis. Pages web servies compressées (WebGz.h généré par tools/gen_web_gz.py)
 // ===========================================================================
@@ -1278,6 +1374,7 @@ int main() {
   RUN(test_mqtt_etat_long);
   RUN(test_mqtt_callback_actions);
   RUN(test_mqtt_source_pmqtt);
+  RUN(test_zendure);
   RUN(test_utilitaires);
   RUN(test_source_externe);
   RUN(test_energie_quotidienne);

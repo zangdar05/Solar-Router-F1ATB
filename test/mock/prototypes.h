@@ -178,6 +178,11 @@ void wpsStop();
 // Linky auxiliaire (S1)
 void Setup_LinkyAux();
 void LectureLinkyAux();
+
+// Zendure 1CT-S
+void Setup_Zendure();
+void LectureZendure();
+void TrameZendure(const uint8_t *p, int n);
 void EstimePuissanceTIC(long &energie, long nouvelle, unsigned long &tLast, float &moy, float &deltaW);
 void DecodeTIC(HardwareSerial &port, TicData &tic, bool principal);
 void DecodeGroupeTIC(TicData &tic, const String &code, const String &val, bool checksumOk, bool principal);

@@ -514,6 +514,10 @@ async function LoadData() {
                 GID('infoPmqtt').style.display="block";
                 GH('dataPmqtt', groupes[1]);
                 break;
+            case "Zendure":
+                GID('infoZendure').style.display="block";
+                GH('dataZendure', groupes[1]);
+                break;
 
             case "Linky":
                 TraiteLinky(groupes[1], groupes[2]);

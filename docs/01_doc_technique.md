@@ -8,7 +8,7 @@ Version analysée : 17.29 (août 2026), core ESP32 3.3.11, Arduino IDE 2.3.10, p
 |---|---|
 | Cible | ESP32 Wroom (WiFi), WT32-ETH01 / ESP32-ETH01 (Ethernet LAN8720), cartes avec écran 2.4"/2.8"/3.2" (ILI9341/ST7789, tactile résistif XPT2046 ou capacitif CST820/GT911) |
 | Rôle | Mesurer la puissance en entrée de maison, piloter jusqu'à 10 « Actions » (Triac gradateur, SSR, relais GPIO, PWM, relais HTTP distants) pour absorber le surplus PV |
-| Sources de mesure (exclusives, une seule à la fois) | `NotDef` (simulation), `UxI` (ADC tension+courant), `Linky` (TIC standard), `UxIx2` (JSY-MK-194T Modbus RTU), `UxIx3` (JSY-MK-333 triphasé), `Enphase` (Envoy-S), `ShellyEm`, `ShellyPro`, `SmartG`, `HomeW`, `Pmqtt` (puissance reçue en MQTT), `Ext` (autre routeur F1ATB par HTTP) |
+| Sources de mesure (exclusives, une seule à la fois) | `NotDef` (simulation), `UxI` (ADC tension+courant), `Linky` (TIC standard), `UxIx2` (JSY-MK-194T Modbus RTU), `UxIx3` (JSY-MK-333 triphasé), `Enphase` (Envoy-S), `ShellyEm`, `ShellyPro`, `SmartG`, `HomeW`, `Pmqtt` (puissance reçue en MQTT), `Zendure` (écoute RS485 du compteur Zendure 1CT-S), `Ext` (autre routeur F1ATB par HTTP) |
 | Interfaces | HTTP :80 (pages + AJAX), Telnet :23 (console), Série USB 115200, MQTT (client, auto-discovery Home Assistant), OTA (ArduinoOTA + page /OTA), mDNS `hostname.local` |
 | Persistance | LittleFS 140 K : `parametres.json`, `EnergieMinuit.eng`, `Mois_Wh_AAAAMM.csv` |
 | Partition | `partitions.csv` : nvs 20K, otadata 8K, app0/app1 1900K chacune, coredump 64K, spiffs (LittleFS) 140K |
@@ -38,7 +38,7 @@ Version analysée : 17.29 (août 2026), core ESP32 3.3.11, Arduino IDE 2.3.10, p
 
 | Contexte | Périodicité | Contenu |
 |---|---|---|
-| `Task_LectureRMS` (cœur 0, prio 10, pile 10 000) | `PeriodeProgMillis` selon source (Linky 2 ms, UxI 40 ms, UxIx2 400 ms, UxIx3 500-800 ms, Shelly/SmartG/HomeW 300 ms + ralenti, Enphase 2 s adaptatif, Ext 800 ms, Pmqtt 600 ms) | Acquisition de la source unique choisie par `Source` |
+| `Task_LectureRMS` (cœur 0, prio 10, pile 10 000) | `PeriodeProgMillis` selon source (Linky 2 ms, UxI 40 ms, UxIx2 400 ms, UxIx3 500-800 ms, Shelly/SmartG/HomeW 300 ms + ralenti, Enphase 2 s adaptatif, Ext 800 ms, Pmqtt 600 ms, Zendure 10 ms) | Acquisition de la source unique choisie par `Source` |
 | `loop()` (cœur 1) | continu, `delay(1)` | OTA, `server.handleClient()`, Telnet, console série, histo 5 mn / 2 s, `GestionOverproduction()` toutes les 200 ms, `GestionMQTT()` toutes les 500 ms, LEDs 50 ms, températures 15 s, surveillance WiFi/Ethernet/puissance 30 s, RTE, écran |
 | ISR `onTimer` | 100 µs | Découpe de phase Triac (compte 100 pas sur 10 ms, allume la gâchette quand `PulseComptage[0] > Retard[0]`) |
 | ISR `currentNull` | front montant ZC (10 ms) | Déglitch 2 ms, `ITmode` monte jusqu'à 5, appelle `GestionIT_10ms()` |
@@ -144,6 +144,9 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 - `Source_EnphaseEnvoy.ino` (685 lignes) : jeton via `enlighten.enphaseenergy.com` puis `entrez.enphaseenergy.com` (HTTPS `setInsecure`), jeton persisté dans `/tokenenphase.json`, lecture `/ivp/meters/readings` en keep-alive ; héberge le **parseur JSON maison** (`ValJson`, `StringJson`, `SubJson`, `LongJson`, `IntJson`… 11 variantes quasi identiques) utilisé par tout le projet.
 - `Source_ShellyProEm.ino` (346 lignes) : `Shelly.GetDeviceInfo` puis `Shelly.GetStatus`, 4 branches (3EM triphasé, 3EM mono, EM50 2 voies) ; numéro de voie lu dans `EnphaseSerial`.
 
+### 4.11 Zendure 1CT-S
+- `Source_Zendure.ino` : écoute passive (RX seul, 115200 8N1) du bus RS485 entre le compteur 1CT-S et le SolarFlow ; protocole propriétaire (en-tête AA 55, CRC16/MODBUS poids fort d'abord), ID de mesure lu dans `EnphaseSerial` (vide = 3, négatif = signe inversé). Détail du format : `05_journal_modifications.md` § 6.
+
 ## 5. Modèle de données `parametres.json` (extraits clés)
 | Clé | Type | Rôle |
 |---|---|---|
@@ -155,7 +158,7 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 | `ModeReseau` | 0/1/2 | Internet / LAN seul / AP isolé (MQTT et RTE désactivés si 2) |
 | `MQTTRepet`, `MQTTIP`, `MQTTPort`, `MQTTUser`, `MQTTPwd`, `MQTTPrefix`, `MQTTPrefixEtat`, `MQTTdeviceName`, `TopicP`, `subMQTT` | | Publication (période s), broker, préfixes discovery/état, topic puissance entrante, souscription ordres |
 | `RMSextIP`, `RMS_IP1..7` | ulong | IP source externe / Shelly / SmartG / HomeWizard ; routeurs partenaires |
-| `EnphaseUser/Pwd/Serial` | | Enphase ; `EnphaseSerial` sert aussi de n° de voie Shelly (0/1, 3 = 3EM, 30+ Gen3, 63 = 3EM-63) |
+| `EnphaseUser/Pwd/Serial` | | Enphase ; `EnphaseSerial` sert aussi de n° de voie Shelly (0/1, 3 = 3EM, 30+ Gen3, 63 = 3EM-63) et d'ID de mesure Zendure (vide = 3, négatif = signe inversé) |
 | `Horloge`, `idxFuseau`, `ntpServer` | | Horloge |
 | `Actions[]` | array | Voir 4.4 |
 

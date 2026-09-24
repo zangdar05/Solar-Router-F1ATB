@@ -6,3 +6,6 @@
 __pycache__/
 test/build/
 perso/
+esp_modbus_spy/
+esp_modbus_spy.zip
+trames.csv

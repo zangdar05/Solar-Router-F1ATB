@@ -179,7 +179,7 @@ const char *ParaHtml = R"====(
         </div>
 
         <div class="ligne" id="port_serie">
-          <label for="Serie">Port série 2 <span class="fsize10">Pour UxIx2, UxIx3 ou Linky</span></label>
+          <label for="Serie">Port série 2 <span class="fsize10">Pour UxIx2, UxIx3, Linky ou Zendure</span></label>
           <select id="Serie" onclick="checkDisabled();">
             <option value="0" selected>Non utilisé</option>
             <option value="1">RX=gpio 16, TX=gpio 17</option>
@@ -191,13 +191,14 @@ const char *ParaHtml = R"====(
         </div>
 
         <div class="ligne" id="Vport_serie">
-          <label for="Serial2V">Vitesse Port série 2 <span class="fsize10">Défaut : UxIx2=4800, UxIx3=9600, Linky=9600</span></label>
+          <label for="Serial2V">Vitesse Port série 2 <span class="fsize10">Défaut : UxIx2=4800, UxIx3=9600, Linky=9600, Zendure=115200</span></label>
           <select id="Serial2V" onclick="checkDisabled();">
             <option value="0" selected>Pas utilisé</option>
             <option value="4800">4800 bauds</option>
             <option value="9600">9600 bauds</option>
             <option value="19200">19200 bauds</option>
             <option value="38400">38400 bauds</option>
+            <option value="115200">115200 bauds</option>
           </select>
         </div>
 
@@ -378,6 +379,7 @@ const char *ParaHtml = R"====(
             <option value="ShellyPro">Shelly Pro Em</option>
             <option value="Ext">ESP Externe</option>
             <option value="Pmqtt">MQTT</option>
+            <option value="Zendure">Zendure 1CT-S (RS485)</option>
           </select>
         </div>
 

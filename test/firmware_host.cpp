@@ -41,6 +41,7 @@
 #include "Source_SmartG.ino"
 #include "Source_HomeWizard.ino"
 #include "Source_MQTT.ino"
+#include "Source_Zendure.ino"
 #include "Source_Externe.ino"
 
 // NB: Actions.cpp est compilé comme unité séparée (Actions.h n'a pas de garde

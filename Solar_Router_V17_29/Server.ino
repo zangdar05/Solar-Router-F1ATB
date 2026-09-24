@@ -307,6 +307,9 @@ void handleAjaxRMS() {  // Envoi des dernières données  brutes reçues du RMS
     if (Source_data == "Pmqtt") {
       S += GS + P_MQTT_Brute;
     }
+    if (Source_data == "Zendure") {
+      S += GS + Zendure_dataBrute;
+    }
     if (LinkyAuxActif && Source_data != "Linky") {  //Flux TIC du Linky auxiliaire (tampon 1 Ko)
       S += GS + "LinkyAux" + GS;
       int idx = LastIdx % ticAux.bufSize;

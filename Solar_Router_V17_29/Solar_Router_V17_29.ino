@@ -662,6 +662,12 @@ float pfMoy2 = 1;  //pf Voie secondaire
 String Shelly_Name = "";
 String Shelly_Profile = "";
 
+//Paramètres pour Zendure 1CT-S (écoute du bus RS485 1CT-S <-> SolarFlow)
+String Zendure_dataBrute = "";
+uint8_t ZdBuf[300];
+int ZdN = 0;
+unsigned long ZdNbOK = 0, ZdNbKO = 0, ZdLastMillis = 0;
+
 //Paramètres pour puissance via MQTT
 String P_MQTT_Brute = "";
 float PwMQTT = 0;
@@ -1267,6 +1273,9 @@ void setup() {
     if (Source == "Linky") {
       Setup_Linky();
     }
+    if (Source == "Zendure") {
+      Setup_Zendure();
+    }
   }
 
   if (Source == "Ext") {
@@ -1386,6 +1395,10 @@ void Task_LectureRMS(void *pvParameters) {
         if (Source == "Linky") {
           LectureLinky();
           PeriodeProgMillis = 2;
+        }
+        if (Source == "Zendure") {
+          LectureZendure();
+          PeriodeProgMillis = 10;
         }
       }
       if (Source == "Enphase") {
@@ -1686,7 +1699,7 @@ void loop() {
       LinkyAuxPerdu = perdu;
       TelnetPrintln("Linky auxiliaire : " + String(ticAux.nbTrames) + " trames, " + String(ticAux.nbErrChecksum) + " erreurs checksum, EAST=" + String(ticAux.EAST) + " EAIT=" + String(ticAux.EAIT));
     }
-    if (pSerial == 0 && (Source == "UxIx2" || Source == "UxIx3" || Source == "Linky")) StockMessage("! Port série non défini !");
+    if (pSerial == 0 && (Source == "UxIx2" || Source == "UxIx3" || Source == "Linky" || Source == "Zendure")) StockMessage("! Port série non défini !");
   }
 
 

@@ -315,6 +315,7 @@ function checkDisabled() {
     const pESP = GID("ESP").value;
 
     if (GID("sources").value =="Linky") GID("Serial2V").value=9600; //vitesse Linky en mode standard 
+    if (GID("sources").value =="Zendure") GID("Serial2V").value=115200;
     GID("Vport_serie").style.display = (GID("Serie").value>0) ? "table-row": "none";
     const auxVisible = F.ModePara > 0 && GID("sources").value != "Linky";
     GID("LinkyAuxL").style.display = auxVisible ? "table-row" : "none";
@@ -504,6 +505,9 @@ function AdaptationSource() {
                                  Triphasé 3EM-63 : voie = 63</div>`;
                                  
             break;
+        case 'Zendure':
+            lab_enphaseShelly = "ID de la mesure Zendure : <span class='fsize10'><br>Vide = 3 (entrée par défaut du 1CT-S), 15 = total ?<br>ID négatif (ex. -3) = signe inversé</span>";
+            break;
     }
     
     // Mise à jour des libellés
@@ -518,7 +522,7 @@ function AdaptationSource() {
     // Visibilité des options d'authentification/série Enphase/Shelly
     GID('ligneEnphaseUser').style.display = (F.Source === 'Enphase') ? "table-row" : "none";
     GID('ligneEnphasePwd').style.display = (F.Source === 'Enphase') ? "table-row" : "none";
-    GID('ligneEnphaseSerial').style.display = (F.Source === 'Enphase' || F.Source === 'ShellyEm' || F.Source === 'ShellyPro') ? "table-row" : "none";
+    GID('ligneEnphaseSerial').style.display = (F.Source === 'Enphase' || F.Source === 'ShellyEm' || F.Source === 'ShellyPro' || F.Source === 'Zendure') ? "table-row" : "none";
 }
 
 /**
