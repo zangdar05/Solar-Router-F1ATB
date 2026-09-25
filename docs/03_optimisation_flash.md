@@ -27,8 +27,9 @@ Mesures : `python -m platformio run` (core ESP32 3.3.12, `partitions.csv` du pro
 | 3 Code mort + tables multi-sinus | `c59b506` | 1 732 479 | −1 104 | 89,0 % | 91 440 |
 | 4 Linky auxiliaire (S1) + patchs + parseurs Enphase | `3eb0485` | 1 734 015 | +1 536 | 89,1 % | 92 904 |
 | 5 Source Zendure 1CT-S (réf. `21f80cb` : 1 733 507 / 92 904) | `de1199b` | 1 735 567 | +2 060 | 89,2 % | 93 240 |
-| 6 Zendure : trame reconnue à sa charge | `HEAD` | 1 735 559 | −8 | 89,2 % | 93 240 |
-| **Total** | | **1 735 559** | **−162 000 (−8,5 %)** | | +1 480 |
+| 6 Zendure : trame reconnue à sa charge | `97124c7` | 1 735 559 | −8 | 89,2 % | 93 240 |
+| 7 Zendure : ID 0 à 2 en MQTT | `HEAD` | 1 736 995 | +1 436 | 89,3 % | 93 256 |
+| **Total** | | **1 736 995** | **−160 564 (−8,5 %)** | | +1 496 |
 
 Marge disponible : **210 041 octets** (au lieu de 48 041), soit de quoi ajouter le « Linky auxiliaire » (`04_architecture_mqtt_linky.md`, ≈ 6 Ko), un second UART, des entités HA supplémentaires, etc.
 

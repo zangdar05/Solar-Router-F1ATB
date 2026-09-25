@@ -14,7 +14,8 @@ Chaque étape = tests hôte verts (`python test/run_tests.py`) + build PlatformI
 | 5 | `c59b506` | Code mort, tables multi-sinus figées | 1 732 479 | 91 440 | 645 |
 | 6 | `383e90f` | Docs : chiffrage flash par fonctionnalité | — | — | — |
 | 7 | `4aa2cdb` | **Linky auxiliaire (S1)**, patchs B12/B15-B21/B27, parseurs Enphase | 1 734 015 | 92 904 | 679 |
-| 14 | `HEAD` | Zendure : trame de mesure reconnue à sa charge (le type change d'une session à l'autre : 0x010A, 0x0106), trame 02 00 de 3,6 s ignorée ; signe confirmé (négatif = injection) | 1 735 559 | 93 240 | 717 |
+| 15 | `HEAD` | Zendure : ID 0 à 2 présents publiés en MQTT (`Zendure_ID0..2`, W), octets 3-4 de l'en-tête lus comme compteur 16 bits (« Trame n° »), test sur trames réelles du 25/09 (§ 6) | 1 736 995 | 93 256 | 737 |
+| 14 | `97124c7` | Zendure : trame de mesure reconnue à sa charge (le type change d'une session à l'autre : 0x010A, 0x0106), trame 02 00 de 3,6 s ignorée ; signe confirmé (négatif = injection) | 1 735 559 | 93 240 | 717 |
 | 13 | `de1199b` | **Source Zendure 1CT-S** : écoute RS485 du bus 1CT-S ↔ SolarFlow (trames AA 55, CRC16), ID de mesure réglable (défaut 3), bloc Données brutes (§ 6) | 1 735 567 | 93 240 | 714 |
 | 12 | `21f80cb` | Linky auxiliaire : estimateur d'injection CACSI aussi sur l'auxiliaire, entité MQTT `Linky_Pw` (W signés), flux TIC auxiliaire affiché dans Données brutes (tableau Linky) | 1 733 507 | 92 904 | 690 |
 | 11 | `0214fb2` | MQTT : état publié dès que le Linky auxiliaire est actif, même sans source de puissance valide (Source = Pmqtt sans publication) | 1 732 815 | 92 904 | 690 |
@@ -95,18 +96,22 @@ Non corrigés (documentés) : B10 appels bloquants sur le cœur 1, B11 absence d
 Utiliser comme source de puissance maison le compteur Zendure 1CT-S (pince CT) qui pilote un SolarFlow 1600 AC+, sans matériel de mesure supplémentaire : le routeur écoute en parallèle le bus RS485 entre les deux appareils. Le protocole n'est pas du Modbus : sa structure a été établie à l'aide du firmware « ESP Modbus Spy » sur des captures réelles, puis validée par le CRC.
 
 ```
-[01 00]  AA 55  01 xx  seq  FF  00 20  { ID u16 | taille u16 = 4 | valeur int32 } × 4  CRC_fort CRC_faible
-préfixe  début  type   n°       long.   charge (big-endian)                            CRC16/MODBUS de AA 55 à la fin de la charge
+[01 00]  AA 55  01  cpt u16  FF  00 20  { ID u16 | taille u16 = 4 | valeur int32 (W) } × 4  CRC_fort CRC_faible
+préfixe  début      compteur      long.   charge (big-endian)                                CRC16/MODBUS de AA 55 à la fin de la charge
 ```
 
-La trame de mesure du 1CT-S (préfixe `01 00`) arrive toutes les 600 ms (115200 8N1). Elle porte les ID 1, 2, 3 et 15 ; sur l'installation observée (une seule pince), l'ID 3 porte la puissance et l'ID 15 la même valeur (somme ou entrée par défaut : à confirmer avec plusieurs pinces). Signe confirmé : positif = soutirage, négatif = injection.
+La trame de mesure du 1CT-S (préfixe `01 00`) arrive toutes les 600 ms (115200 8N1). Elle porte les ID 1, 2, 3 et 15 (pas d'ID 0) ; sur l'installation observée (une seule pince), l'ID 3 porte la puissance, les ID 1 et 2 valent 0 et l'ID 15 la même valeur que l'ID 3 : c'est probablement la somme des entrées (non confirmable sans plusieurs pinces). Signe confirmé par l'allumage d'un appareil de ≈ 2 kW (capture du 25/09) : positif = soutirage, négatif = injection.
+
+Les octets 3-4 (après `AA 55 01`) forment un **compteur 16 bits** incrémenté à chaque trame de l'émetteur (capture du 25/09 : `0x0BDF` → `0x0C24` sans saut, passage `0x0BFF` → `0x0C00`). Les « types » `0x010A`, `0x0106`, `0x0122`, `0x012E` relevés sur les premières captures n'étaient que l'octet haut de ce compteur.
 
 | Trame | Préfixe | Type observé | Période | Charge |
 |---|---|---|---|---|
-| Mesure du 1CT-S | `01 00` | `0x010A` puis `0x0106` (le 2e octet change d'une session à l'autre) | 600 ms | 4 blocs [ID][4][int32] |
-| Émetteur n° 2 (SolarFlow probable) | `02 00` | `0x0122` puis `0x012E` | 3,6 s, 10 à 85 ms après une trame de mesure sur 6 | 6 octets constants `FFFF 0002 FFFF` (bloc ID 0xFFFF, taille 2, valeur 0xFFFF ?) : acquittement ou signe de vie, aucune mesure |
+| Mesure du 1CT-S | `01 00` | `01` + compteur 16 bits | 600 ms | 4 blocs [ID][4][int32] |
+| Émetteur n° 2 (SolarFlow probable) | `02 00` | `01` + compteur 16 bits propre | 3,6 s, 10 à 85 ms après une trame de mesure sur 6 | 6 octets constants `FFFF 0002 FFFF` (bloc ID 0xFFFF, taille 2, valeur 0xFFFF ?) : acquittement ou signe de vie, aucune mesure |
 
-Le routeur ne filtre donc pas sur le type : une trame est une mesure si sa charge est faite de blocs de 4 octets.
+Le routeur ne filtre donc pas sur l'en-tête : une trame est une mesure si sa charge est faite de blocs de 4 octets.
+
+**MQTT** : les ID 0 à 2 présents dans la dernière trame de mesure sont publiés tels quels (W, + soutirée / − injectée) sous `Zendure_ID0`, `Zendure_ID1`, `Zendure_ID2` ; seuls les ID effectivement vus sont découverts (ici `Zendure_ID1` et `Zendure_ID2`), un ID apparu plus tard l'est au passage de discovery suivant (5 min). L'ID de régulation reste publié via `PuissanceS_M` / `PuissanceI_M`.
 
 ### 6.2 Ce qui a changé
 | Fichier | Modification |
@@ -115,7 +120,8 @@ Le routeur ne filtre donc pas sur le type : une trame est une mesure si sa charg
 | `Solar_Router_V17_29.ino` | Globales `Zendure_dataBrute`, `ZdBuf`, compteurs ; setup et lecture toutes les 10 ms dans le bloc port série ; alerte « port série non défini » |
 | `Server.ino`, `PageBrute.h`, `JS_Brute.h` | Bloc « Données Zendure 1CT-S » : valeurs de tous les ID, ID utilisé, trames valides / rejetées |
 | `PagePara.h`, `JS_Para.h` | Option « Zendure 1CT-S (RS485) » en fin de liste (non désactivée en mode AP), vitesse 115200 forcée, champ `EnphaseSerial` réutilisé comme ID de mesure |
-| `test/` | `test_zendure` : trame capturée reproduite, soutirage ID 3, trame tronquée + trame en deux morceaux, ID 15 inversé, ID absent, CRC faux |
+| `EnvoiMQTT.ino` | Discovery et état `Zendure_ID0..2` (ID vus seulement) ; globales `ZdID[3]`, `ZdIDvus` |
+| `test/` | `test_zendure` : trame capturée reproduite, soutirage ID 3, trame tronquée + trame en deux morceaux, ID 15 inversé, ID absent, CRC faux, trames réelles du 25/09 (compteur, 2 102 W) ; `test_zendure_mqtt` : discovery et état des ID 0 à 2 |
 
 Aucune nouvelle clé dans `parametres.json`.
 
@@ -125,7 +131,7 @@ Aucune nouvelle clé dans `parametres.json`.
 3. Champ « ID de la mesure Zendure » : vide = 3 ; `15` pour l'ID 15 ; un ID négatif (`-3`) inverse le signe (inutile avec le 1CT-S, dont la convention est celle du routeur).
 
 ### 6.4 Limites
-- Rôle des autres entrées de mesure du 1CT-S et de l'ID 15 non établi (une seule pince disponible) ; trames du préfixe `02 00` ignorées.
+- Rôle des ID 1 et 2 (autres entrées) et de l'ID 15 (somme probable) non confirmé (une seule pince disponible) ; trames du préfixe `02 00` ignorées.
 - Pas de VA ni de cos φ : `Pva_valide = false`. Les totaux d'énergie repartent des valeurs de minuit après un reset (comme la source MQTT).
 - Watchdog : sans trame valide pendant ≈ 2 min, le routeur redémarre (« Puissances non reçues »), comme pour les autres sources. Un câblage bruité fait perdre des trames (compteur « rejetées ») : sur les captures du 24/09, environ une trame de mesure sur deux arrivait tronquée, la fin de la trame manquant entièrement.
 

@@ -1095,6 +1095,72 @@ static void test_zendure() {
   LectureZendure();
   CHECK_EQ((long)ZdNbKO, 2L);
   CHECK_EQ(PuissanceS_M, 250);
+
+  // Trames réelles (capture du 25/09) : compteur 16 bits 0x0BFF -> 0x0C00, puis appel de charge de 2102 W
+  const char *capt[] = {
+    "0100AA55010BFFFF00200001000400000000000200040000000000030004FFFFFFD2000F0004FFFFFFD266F8",
+    "0100AA55010C00FF00200001000400000000000200040000000000030004FFFFFFD6000F0004FFFFFFD65EC1",
+    "0100AA55010C12FF0020000100040000000000020004000000000003000400000836000F000400000836BA1C",
+  };
+  ZdIDvus = 0;
+  for (const char *c : capt) {
+    std::string s;
+    for (const char *h = c; h[0]; h += 2) s += (char)strtoul(std::string(h, 2).c_str(), nullptr, 16);
+    MySerial.mock_feed(s);
+    LectureZendure();
+    if (c == capt[1]) {
+      CHECK_EQ(PuissanceI_M, 42);
+      CHECK(Zendure_dataBrute.indexOf("Trame n°3072 :") >= 0);
+    }
+  }
+  CHECK_EQ(PuissanceS_M, 2102);
+  CHECK_EQ(PuissanceI_M, 0);
+  CHECK_EQ((int)ZdIDvus, 0b110);  // ID 1 et 2 présents, pas d'ID 0
+  CHECK_EQ((long)ZdID[1], 0L);
+  CHECK_EQ((long)ZdID[2], 0L);
+}
+
+// Zendure : les ID 0 à 2 vus dans la dernière trame sont découverts et publiés en MQTT
+static void test_zendure_mqtt() {
+  config_mqtt();
+  Source = "Zendure";
+  EnphaseSerial = "";
+  LissageLong = false;
+  init_puissance();
+  ZdN = 0;
+  ZdIDvus = 0;
+  mock_mqtt_connected = false;
+  CHECK(testMQTTconnected());
+
+  auto zd_topics = [](const char *id) {
+    int n = 0;
+    for (auto &m : mock_mqtt_published)
+      if (m.topic == std::string("homeassistant/sensor/routeur_rms_Zendure_") + id + "/config") n++;
+    return n;
+  };
+  mock_mqtt_published.clear();
+  sendMQTTDiscoveryMsg_global();
+  CHECK_EQ(zd_topics("ID1"), 0);  // aucune trame encore reçue
+
+  MySerial.mock_feed(trame_zendure(-120, 350, 230, 9));
+  LectureZendure();
+  CHECK_EQ((int)ZdIDvus, 0b110);
+  mock_mqtt_published.clear();
+  sendMQTTDiscoveryMsg_global();
+  CHECK_EQ(zd_topics("ID0"), 0);
+  CHECK_EQ(zd_topics("ID1"), 1);
+  CHECK_EQ(zd_topics("ID2"), 1);
+
+  mock_mqtt_published.clear();
+  SendDataToHomeAssistant();
+  CHECK_EQ((int)mock_mqtt_published.size(), 1);
+  JsonDocument d;
+  CHECK(!deserializeJson(d, mock_mqtt_published[0].payload));
+  CHECK_EQ((int)d["Zendure_ID1"], -120);
+  CHECK_EQ((int)d["Zendure_ID2"], 0);
+  CHECK(d["Zendure_ID0"].isNull());
+  CHECK(d["Zendure_ID3"].isNull());
+  CHECK_EQ((int)d["PuissanceS_M"], 350);
 }
 
 // ===========================================================================
@@ -1388,6 +1454,7 @@ int main() {
   RUN(test_mqtt_callback_actions);
   RUN(test_mqtt_source_pmqtt);
   RUN(test_zendure);
+  RUN(test_zendure_mqtt);
   RUN(test_utilitaires);
   RUN(test_source_externe);
   RUN(test_energie_quotidienne);

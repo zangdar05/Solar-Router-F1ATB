@@ -85,7 +85,7 @@ Version analysée : 17.29 (août 2026), core ESP32 3.3.11, Arduino IDE 2.3.10, p
 | `GestionMQTT()` | Active si `ModeReseau < 2` et (`MQTTRepet > 0` ou température MQTT ou `Source == "Pmqtt"` ou `subMQTT == 1`) |
 | `testMQTTconnected()` | Connexion avec LWT `<prefixEtat>/<device>/Available`, souscriptions : `TopicT[c]`, `TopicP`, `<device>/<TitreAction>` ; construit `DEVICE` (JSON device HA) ; échec → 30 s de pénalité |
 | `envoiVersMQTT()` | Toutes les `MQTTRepet` s : discovery si `!Discovered` (remis à faux toutes les 5 mn), puis état |
-| `sendMQTTDiscoveryMsg_global()` | Un message `config` retained par entité : puissances/énergies M (et T selon source), températures, LTARF/Code_Tarifaire, RTE, NGTF/STGE/EASF (Linky), Enphase, UxIx3, actions (Ouverture, Actif, Durée, Force) |
+| `sendMQTTDiscoveryMsg_global()` | Un message `config` retained par entité : puissances/énergies M (et T selon source), températures, LTARF/Code_Tarifaire, RTE, NGTF/STGE/EASF (Linky), Enphase, UxIx3, Zendure (ID 0 à 2 vus), actions (Ouverture, Actif, Durée, Force) |
 | `SendDataToHomeAssistant()` | Un seul JSON d'état sur `<prefixEtat>/<device>_state` (buffer 1 200 octets) |
 | `callback()` | Réception : température `{"temperature":x}`, puissance `{"Pw":..,"Pva":..,"Pf":..}`, ordres Action `{"tOnOff":min,"Mode":"Decoupe|OnOff|Multi|Train|PWM|Demi|Inactif","Periode":n,"SeuilOn":w,"SeuilOff":w,"OuvreMax":%}` (sauvegarde en flash si Mode/Periode) |
 
@@ -145,7 +145,7 @@ Séparateurs : `ES`=27, `FS`=28, `GS`=29, `RS`=30, `US`=31.
 - `Source_ShellyProEm.ino` (346 lignes) : `Shelly.GetDeviceInfo` puis `Shelly.GetStatus`, 4 branches (3EM triphasé, 3EM mono, EM50 2 voies) ; numéro de voie lu dans `EnphaseSerial`.
 
 ### 4.11 Zendure 1CT-S
-- `Source_Zendure.ino` : écoute passive (RX seul, 115200 8N1) du bus RS485 entre le compteur 1CT-S et le SolarFlow ; protocole propriétaire (en-tête AA 55, CRC16/MODBUS poids fort d'abord), ID de mesure lu dans `EnphaseSerial` (vide = 3, négatif = signe inversé). Détail du format : `05_journal_modifications.md` § 6.
+- `Source_Zendure.ino` : écoute passive (RX seul, 115200 8N1) du bus RS485 entre le compteur 1CT-S et le SolarFlow ; protocole propriétaire (en-tête AA 55, CRC16/MODBUS poids fort d'abord), ID de mesure lu dans `EnphaseSerial` (vide = 3, négatif = signe inversé) ; ID 0 à 2 présents publiés en MQTT (`Zendure_ID0..2`, W). Détail du format : `05_journal_modifications.md` § 6.
 
 ## 5. Modèle de données `parametres.json` (extraits clés)
 | Clé | Type | Rôle |

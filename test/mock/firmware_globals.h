@@ -207,6 +207,8 @@ extern String P_MQTT_Brute;
 extern String Zendure_dataBrute;
 extern int ZdN;
 extern unsigned long ZdNbOK, ZdNbKO, ZdLastMillis;
+extern int32_t ZdID[3];
+extern uint8_t ZdIDvus;
 extern float PwMQTT;
 extern float PvaMQTT;
 extern float PfMQTT;

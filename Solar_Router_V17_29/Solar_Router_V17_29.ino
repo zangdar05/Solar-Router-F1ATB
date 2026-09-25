@@ -667,6 +667,8 @@ String Zendure_dataBrute = "";
 uint8_t ZdBuf[300];
 int ZdN = 0;
 unsigned long ZdNbOK = 0, ZdNbKO = 0, ZdLastMillis = 0;
+int32_t ZdID[3] = { 0, 0, 0 };  // valeurs des ID 0 à 2 (W) de la dernière trame de mesure, publiées en MQTT
+uint8_t ZdIDvus = 0;            // bit i = ID i présent dans la dernière trame de mesure
 
 //Paramètres pour puissance via MQTT
 String P_MQTT_Brute = "";

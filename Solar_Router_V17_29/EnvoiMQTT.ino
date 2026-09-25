@@ -245,6 +245,10 @@ void sendMQTTDiscoveryMsg_global() {
     DeviceToDiscover("PactProd", "Puissance produite", "W", "power", "0");
     DeviceToDiscover("PactConso_M", "Puissance conso.", "W", "power", "0");
   }
+  if (Source == "Zendure") {  // ID vus dans la dernière trame ; un ID apparu plus tard est découvert au passage suivant (5 min)
+    for (int i = 0; i < 3; i++)
+      if (ZdIDvus & (1 << i)) DeviceToDiscover("Zendure_ID" + String(i), "Zendure ID" + String(i) + " (+soutirée / -injectée)", "W", "power", "0");
+  }
 
   if (Source == "UxIx3") {
     DeviceToDiscover("Tension_M1", "Tension p1", "V", "voltage", "2");
@@ -433,6 +437,10 @@ void SendDataToHomeAssistant() {
   }
   if (Source == "Enphase") {
     len += snprintf(value + len, RESTE(len, value), ",\"PactProd\":%d, \"PactConso_M\":%d", PactProd, PactConso_M);
+  }
+  if (Source == "Zendure") {
+    for (int i = 0; i < 3; i++)
+      if (ZdIDvus & (1 << i)) len += snprintf(value + len, RESTE(len, value), ",\"Zendure_ID%d\":%ld", i, (long)ZdID[i]);
   }
   if (Source == "UxIx3") {  //Modif Piamp 8/12/2025
     len += snprintf(value + len, RESTE(len, value), ",\"Tension_M1\": %.1f, \"Intensite_M1\": %.1f,\"Tension_M2\": %.1f, \"Intensite_M2\": %.1f,\"Tension_M3\": %.1f, \"Intensite_M3\": %.1f, \"Frequence\":%.2f", Tension_M1, Intensite_M1, Tension_M2, Intensite_M2, Tension_M3, Intensite_M3, Frequence);

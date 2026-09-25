@@ -3,12 +3,14 @@
 // * SolarFlow (protocole propriétaire, 115200 8N1, une trame / 600 ms)   *
 // ************************************************************************
 // Structure déduite des captures (validée par le CRC) :
-//   [préfixe 0-2 o] AA 55 <type u16> <n° seq> FF <longueur u16> <charge> <CRC16/MODBUS poids fort d'abord>
-//   CRC calculé de AA 55 à la fin de la charge. Le 2e octet du type change d'une session à l'autre (0x010A, 0x0106...) :
-//   la trame de mesure du 1CT-S (préfixe 01 00, toutes les 600 ms) se reconnaît à sa charge en blocs
-//   [ID u16][taille u16 = 4][valeur int32], big-endian. La trame du préfixe 02 00 (toutes les 3,6 s, charge FFFF 0002 FFFF) est ignorée.
+//   [préfixe 0-2 o] AA 55 01 <compteur u16> FF <longueur u16> <charge> <CRC16/MODBUS poids fort d'abord>
+//   CRC calculé de AA 55 à la fin de la charge. Le compteur s'incrémente à chaque trame de l'émetteur :
+//   la trame de mesure du 1CT-S (préfixe 01 00, toutes les 600 ms) se reconnaît donc à sa charge en blocs
+//   [ID u16][taille u16 = 4][valeur int32 en W], big-endian. La trame du préfixe 02 00 (toutes les 3,6 s, charge FFFF 0002 FFFF) est ignorée.
+//   ID observés : 1, 2, 3 (entrées de mesure) et 15 (égal à la somme des entrées sur les captures).
 // L'ID lu est le paramètre EnphaseSerial (vide = 3, entrée de mesure par défaut du 1CT-S) ;
 // un ID négatif inverse le signe. Convention du 1CT-S : positif = soutirage réseau, négatif = injection.
+// Les ID 0 à 2 présents sont en plus publiés tels quels en MQTT (Zendure_ID0..2).
 
 void Setup_Zendure() {
   Serial2V = 115200;  //On force la vitesse
@@ -24,9 +26,11 @@ void TrameZendure(const uint8_t *p, int n) {
   bool inverse = id < 0;
   id = abs(id);
   if (id == 0) id = 3;
-  String S = "Trame n°" + String(p[4]) + " :";
+  String S = "Trame n°" + String((p[3] << 8) | p[4]) + " :";
   bool trouve = false;
   float Pw = 0;
+  int32_t vals[3];
+  uint8_t vus = 0;
   int fin = 8 + ((p[6] << 8) | p[7]);
   if (fin == 8 || (fin - 8) % 8) return;  // pas une trame de mesure
   for (int k = 8; k + 8 <= fin; k += 8) {
@@ -34,11 +38,18 @@ void TrameZendure(const uint8_t *p, int n) {
     int ident = (p[k] << 8) | p[k + 1];
     int32_t v = (int32_t)(((uint32_t)p[k + 4] << 24) | ((uint32_t)p[k + 5] << 16) | ((uint32_t)p[k + 6] << 8) | p[k + 7]);
     S += " ID" + String(ident) + "=" + String(v);
+    if (ident < 3) {
+      vals[ident] = v;
+      vus |= 1 << ident;
+    }
     if (ident == id) {
       trouve = true;
       Pw = inverse ? -v : v;
     }
   }
+  for (int i = 0; i < 3; i++)
+    if (vus & (1 << i)) ZdID[i] = vals[i];
+  ZdIDvus = vus;
   Zendure_dataBrute = S + "<br>ID utilisé : " + String(inverse ? -id : id) + (trouve ? "" : " (absent de la trame)") +
                       "<br>Trames valides : " + String(ZdNbOK) + ", rejetées (CRC) : " + String(ZdNbKO);
   if (!trouve) return;
